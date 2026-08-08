@@ -7,7 +7,7 @@
     app:cardBackgroundColor="@color/rift_surface"
     app:cardCornerRadius="8dp"
     app:cardElevation="1dp"
-    app:strokeColor="#FFE2E7EF"
+    app:strokeColor="@color/rift_stroke"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -19,11 +19,11 @@
 
         <ImageView
             android:id="@+id/cardThumbnail"
-            android:layout_width="58dp"
-            android:layout_height="82dp"
-            android:background="#FFE2E7EF"
+            android:layout_width="92dp"
+            android:layout_height="128dp"
+            android:background="@color/rift_surface_tint"
             android:contentDescription="@string/card_name"
-            android:scaleType="centerCrop" />
+            android:scaleType="fitCenter" />
 
         <LinearLayout
             android:layout_width="0dp"

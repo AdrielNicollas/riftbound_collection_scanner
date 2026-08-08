@@ -56,9 +56,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="180dp"
                 android:adjustViewBounds="true"
-                android:background="#FFE2E7EF"
+                android:background="@color/rift_surface_tint"
                 android:contentDescription="@string/capture_card"
-                android:scaleType="centerCrop"
+                android:scaleType="fitCenter"
                 android:visibility="gone" />
 
             <com.google.android.material.textfield.TextInputLayout

@@ -11,7 +11,7 @@
         <item name="colorOnSecondary">@color/white</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <item name="android:navigationBarColor">#FF101418</item>
+        <item name="android:navigationBarColor">@color/rift_primary_dark</item>
         <!-- Customize your theme here. -->
     </style>
 </resources>

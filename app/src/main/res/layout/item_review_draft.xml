@@ -7,7 +7,7 @@
     app:cardBackgroundColor="@color/rift_surface"
     app:cardCornerRadius="8dp"
     app:cardElevation="1dp"
-    app:strokeColor="#FFE2E7EF"
+    app:strokeColor="@color/rift_stroke"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -27,11 +27,12 @@
         <ImageView
             android:id="@+id/draftImage"
             android:layout_width="match_parent"
-            android:layout_height="170dp"
+            android:layout_height="420dp"
             android:layout_marginTop="10dp"
-            android:background="#FFE2E7EF"
+            android:adjustViewBounds="true"
+            android:background="@color/rift_surface_tint"
             android:contentDescription="@string/capture_card"
-            android:scaleType="centerCrop" />
+            android:scaleType="fitCenter" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/nameLayout"
