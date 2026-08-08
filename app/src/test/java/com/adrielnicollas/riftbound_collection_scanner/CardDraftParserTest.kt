@@ -1,0 +1,170 @@
+package com.adrielnicollas.riftbound_collection_scanner
+
+import com.adrielnicollas.riftbound_collection_scanner.data.CardDraftParser
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+class CardDraftParserTest {
+    @Test
+    fun parsesBasicCardFields() {
+        val draft = CardDraftParser.parse(
+            """
+            3
+            Mighty Poro
+            Unit
+            Body
+            """.trimIndent(),
+        )
+
+        assertEquals("Mighty Poro", draft.name)
+        assertEquals("", draft.cardNumber)
+        assertEquals(3, draft.cost)
+        assertEquals("Unit", draft.cardType)
+        assertEquals("Body", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun skipsBrandingWhenChoosingName() {
+        val draft = CardDraftParser.parse(
+            """
+            Riftbound
+            Cost 2
+            Lux
+            Champion Unit
+            Order
+            """.trimIndent(),
+        )
+
+        assertEquals("Lux", draft.name)
+        assertEquals("", draft.cardNumber)
+        assertEquals(2, draft.cost)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("Order", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun parsesSlashCardNumberWithoutConfusingItWithCost() {
+        val draft = CardDraftParser.parse(
+            """
+            Riftbound
+            015/298
+            Mystic Shot
+            Spell
+            Mind
+            """.trimIndent(),
+        )
+
+        assertEquals("Mystic Shot", draft.name)
+        assertEquals("015/298", draft.cardNumber)
+        assertEquals(null, draft.cost)
+        assertEquals("Spell", draft.cardType)
+        assertEquals("Mind", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun parsesSetCodeCardNumber() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            Garen
+            Champion Unit
+            OGN-123
+            Order
+            """.trimIndent(),
+        )
+
+        assertEquals("Garen", draft.name)
+        assertEquals("OGN-123", draft.cardNumber)
+        assertEquals(4, draft.cost)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("Order", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun parsesLabeledCardNumber() {
+        val draft = CardDraftParser.parse(
+            """
+            1
+            Flame Chompers
+            Gear
+            Card No. 123/298
+            Fury
+            """.trimIndent(),
+        )
+
+        assertEquals("Flame Chompers", draft.name)
+        assertEquals("123/298", draft.cardNumber)
+        assertEquals(1, draft.cost)
+        assertEquals("Gear", draft.cardType)
+        assertEquals("Fury", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun parsesHashCardNumber() {
+        val draft = CardDraftParser.parse(
+            """
+            2
+            Recall
+            Spell
+            #087
+            Calm
+            """.trimIndent(),
+        )
+
+        assertEquals("Recall", draft.name)
+        assertEquals("087", draft.cardNumber)
+        assertEquals(2, draft.cost)
+        assertEquals("Spell", draft.cardType)
+        assertEquals("Calm", draft.domain)
+        assertEquals("", draft.effectText)
+    }
+
+    @Test
+    fun extractsEffectTextWithoutCardMetadata() {
+        val draft = CardDraftParser.parse(
+            """
+            2
+            Mystic Shot
+            Spell
+            Mind
+            Deal 2 damage to a unit.
+            015/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Mystic Shot", draft.name)
+        assertEquals("015/298", draft.cardNumber)
+        assertEquals(2, draft.cost)
+        assertEquals("Spell", draft.cardType)
+        assertEquals("Mind", draft.domain)
+        assertEquals("Deal 2 damage to a unit.", draft.effectText)
+    }
+
+    @Test
+    fun keepsMultilineEffectText() {
+        val draft = CardDraftParser.parse(
+            """
+            Lux
+            Champion Unit
+            Order
+            When you cast a spell, ready this unit.
+            Once each turn, create a Spark.
+            087
+            """.trimIndent(),
+        )
+
+        assertEquals("Lux", draft.name)
+        assertEquals("087", draft.cardNumber)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("Order", draft.domain)
+        assertEquals(
+            "When you cast a spell, ready this unit.\nOnce each turn, create a Spark.",
+            draft.effectText,
+        )
+    }
+}

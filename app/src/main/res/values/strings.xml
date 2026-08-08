@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Riftbound Collection Scanner</string>
+    <string name="bulk_finish">Terminar bulk</string>
+    <string name="bulk_mode">Leitura bulk</string>
+    <string name="bulk_status">Cartas lidas: %1$d</string>
+    <string name="capture_card">Capturar carta</string>
+    <string name="card_cost">Custo</string>
+    <string name="card_domain">Dominio</string>
+    <string name="card_name">Nome da carta</string>
+    <string name="card_number">Numero da carta</string>
+    <string name="card_type">Tipo</string>
+    <string name="choose_mode">Escolhe o tipo de leitura</string>
+    <string name="open_saved_cards">Cartas guardadas</string>
+    <string name="ocr_text">Efeito</string>
+    <string name="review_cards">Rever cartas</string>
+    <string name="save_card">Guardar carta</string>
+    <string name="save_cards">Guardar cartas</string>
+    <string name="scan_date">Data da leitura</string>
+    <string name="saved_cards">Cartas registadas</string>
+    <string name="single_mode">Leitura single</string>
+    <string name="status_ready">Camara pronta</string>
+</resources>
