@@ -90,6 +90,16 @@ python ml\evaluate_domain_tflite.py `
   ".ml-data\processed_domain_dataset"
 ```
 
+Export misclassified crops for visual inspection:
+
+```powershell
+python ml\export_tflite_errors.py `
+  ".ml-data\models\domain\riftbound_domain_classifier.tflite" `
+  ".ml-data\models\domain\labels.txt" `
+  ".ml-data\processed_domain_dataset" `
+  ".ml-data\evaluation_errors"
+```
+
 ## Open Source Notes
 
 The pipeline and model architecture can be public.
