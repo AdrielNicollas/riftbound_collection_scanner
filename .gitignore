@@ -6,6 +6,8 @@
 build/
 app/build/
 /captures
+.ml-data/
+.venv-ml/
 .externalNativeBuild
 .cxx
 local.properties
