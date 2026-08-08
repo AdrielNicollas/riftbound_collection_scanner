@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.util.Size
@@ -21,6 +22,8 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
+import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
+import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
 import com.adrielnicollas.riftbound_collection_scanner.ui.CardGuideOverlayView
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
@@ -40,7 +43,9 @@ import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 
 class ScannerActivity : AppCompatActivity() {
     private lateinit var previewView: PreviewView
@@ -224,7 +229,7 @@ class ScannerActivity : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 lifecycleScope.launch {
                     try {
-                        saveDraft(photoFile, result.text)
+                        saveDraft(photoFile, result.text, detectImageSignals(photoFile))
                     } finally {
                         captureButton.isEnabled = true
                         finishBulkButton.isEnabled = true
@@ -234,7 +239,7 @@ class ScannerActivity : AppCompatActivity() {
             .addOnFailureListener {
                 lifecycleScope.launch {
                     try {
-                        saveDraft(photoFile, "")
+                        saveDraft(photoFile, "", detectImageSignals(photoFile))
                     } finally {
                         captureButton.isEnabled = true
                         finishBulkButton.isEnabled = true
@@ -243,7 +248,52 @@ class ScannerActivity : AppCompatActivity() {
             }
     }
 
-    private suspend fun saveDraft(photoFile: File, ocrText: String) {
+    private suspend fun detectImageSignals(photoFile: File): CardImageSignals {
+        val colorSignals = withContext(Dispatchers.IO) {
+            CardImageSignalDetector.detectColorSignals(photoFile)
+        }
+        val bitmap = withContext(Dispatchers.IO) {
+            CardImageSignalDetector.decode(photoFile)
+        } ?: return colorSignals
+
+        return try {
+            val costBitmap = CardImageSignalDetector.cropCost(bitmap)
+            val mightBitmap = CardImageSignalDetector.cropMight(bitmap)
+            try {
+                val focusedCost = recognizeFocusedNumber(costBitmap)
+                val focusedMight = recognizeFocusedNumber(mightBitmap)
+                colorSignals.copy(
+                    cost = focusedCost,
+                    might = focusedMight,
+                )
+            } finally {
+                costBitmap.recycle()
+                mightBitmap.recycle()
+            }
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private suspend fun recognizeFocusedNumber(bitmap: Bitmap): Int? {
+        val text = suspendCancellableCoroutine { continuation ->
+            textRecognizer.process(InputImage.fromBitmap(bitmap, 0))
+                .addOnSuccessListener { result ->
+                    if (continuation.isActive) continuation.resume(result.text)
+                }
+                .addOnFailureListener {
+                    if (continuation.isActive) continuation.resume("")
+                }
+        }
+
+        return Regex("""\b\d{1,2}\b""")
+            .find(text)
+            ?.value
+            ?.toIntOrNull()
+            ?.takeIf { it in 0..99 }
+    }
+
+    private suspend fun saveDraft(photoFile: File, ocrText: String, imageSignals: CardImageSignals) {
         val parsed = CardDraftParser.parse(ocrText)
         showStatus("A confirmar dados da carta...")
         val officialCard = withContext(Dispatchers.IO) {
@@ -265,10 +315,12 @@ class ScannerActivity : AppCompatActivity() {
                 ocrText = officialCard?.effectText?.takeIf { it.isNotBlank() } ?: parsed.effectText,
                 name = officialCard?.name?.takeIf { it.isNotBlank() } ?: parsed.name,
                 cardNumber = officialCard?.cardNumber?.takeIf { it.isNotBlank() } ?: parsed.cardNumber,
-                cost = parsed.cost,
-                might = parsed.might,
+                cost = imageSignals.cost ?: parsed.cost,
+                might = imageSignals.might ?: parsed.might,
                 cardType = officialCard?.type?.takeIf { it.isNotBlank() } ?: parsed.cardType,
-                domain = officialCard?.domain?.takeIf { it.isNotBlank() } ?: parsed.domain,
+                domain = officialCard?.domain?.takeIf { it.isNotBlank() }
+                    ?: imageSignals.domain.takeIf { it.isNotBlank() }
+                    ?: parsed.domain,
                 scannedAt = scannedAt,
                 scanDate = ScanDates.formatDate(scannedAt),
                 captureOrder = nextOrder,

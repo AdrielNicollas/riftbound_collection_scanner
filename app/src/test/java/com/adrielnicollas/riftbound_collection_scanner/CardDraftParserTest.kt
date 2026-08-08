@@ -245,6 +245,7 @@ class CardDraftParserTest {
             CHAMPION UNIT FIORA DEMACIA
             Fiora
             While I'm MIGHTY, I have DEFLECT.
+            "I long for a worthy opponent."
             232/298
             """.trimIndent(),
         )
@@ -256,6 +257,30 @@ class CardDraftParserTest {
         assertEquals("Champion Unit", draft.cardType)
         assertEquals("", draft.domain)
         assertEquals("While I'm MIGHTY, I have DEFLECT.", draft.effectText)
+    }
+
+    @Test
+    fun removesLoreAndNormalizesMightSymbolsInEffect() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            4
+            CHAMPION UNIT FIORA DEMACIA
+            Fiora
+            While I'm MIGHTY, I have DEFLECT, GANKING,
+            and SHIELD. (I'm Mighty while I have 5+ ý.)
+            "I long for a worthy opponent."
+            OGN 232/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Fiora", draft.name)
+        assertEquals(4, draft.cost)
+        assertEquals(4, draft.might)
+        assertEquals(
+            "While I'm MIGHTY, I have DEFLECT, GANKING,\nand SHIELD. (I'm Mighty while I have 5+ [Might].)",
+            draft.effectText,
+        )
     }
 
     @Test

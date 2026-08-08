@@ -225,12 +225,14 @@ object CardDraftParser {
                     comparable !in ignoredExact &&
                     line.any { it.isLetter() } &&
                     !onlySymbolsRegex.matches(line) &&
+                    !looksLikeLoreLine(line) &&
                     !looksLikeCardNumberLine(line) &&
                     !costLabelRegex.containsMatchIn(line) &&
                     ignoredNameFragments.none { comparable.contains(it) } &&
                     !looksLikeMetadataLine(line) &&
                     !looksLikeCardHeaderLine(line)
             }
+            .map { normalizeEffectSymbols(it) }
             .joinToString(separator = "\n")
             .trim()
     }
@@ -288,6 +290,23 @@ object CardDraftParser {
     private fun looksLikeCardHeaderLine(line: String): Boolean {
         return cardTypes.any { line.containsOptionTokens(it) } &&
             regions.any { line.containsOptionTokens(it) }
+    }
+
+    private fun looksLikeLoreLine(line: String): Boolean {
+        val trimmed = line.trim()
+        return trimmed.startsWith("\"") ||
+            trimmed.startsWith("“") ||
+            trimmed.startsWith("”") ||
+            trimmed.startsWith("'") ||
+            trimmed.startsWith("‘") ||
+            trimmed.startsWith("’")
+    }
+
+    private fun normalizeEffectSymbols(line: String): String {
+        return line
+            .replace(Regex("""[ýÿ]""", RegexOption.IGNORE_CASE), "[Might]")
+            .replace(Regex("""\s+"""), " ")
+            .trim()
     }
 
     private fun String.containsOptionTokens(option: String): Boolean {
