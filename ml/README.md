@@ -53,6 +53,25 @@ Uncertain detections are skipped from training and copied to a sibling `*_needs_
 python ml\prepare_domain_dataset.py input output --min-center-y 0.78
 ```
 
+If the reviewed `_crop.jpg` files are good, copy them into a separate accepted folder:
+
+```powershell
+python ml\accept_review_crops.py `
+  ".ml-data\processed_domain_dataset_needs_review" `
+  ".ml-data\accepted_review_crops" `
+  --clear
+```
+
+Or create a combined training dataset from the base crops plus accepted review crops:
+
+```powershell
+python ml\accept_review_crops.py `
+  ".ml-data\processed_domain_dataset_needs_review" `
+  ".ml-data\processed_domain_dataset_with_review" `
+  --base-dataset ".ml-data\processed_domain_dataset" `
+  --clear
+```
+
 Create a contact sheet to inspect crop quality:
 
 ```powershell
