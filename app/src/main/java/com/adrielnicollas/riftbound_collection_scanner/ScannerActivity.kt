@@ -266,6 +266,7 @@ class ScannerActivity : AppCompatActivity() {
                 name = officialCard?.name?.takeIf { it.isNotBlank() } ?: parsed.name,
                 cardNumber = officialCard?.cardNumber?.takeIf { it.isNotBlank() } ?: parsed.cardNumber,
                 cost = parsed.cost,
+                might = parsed.might,
                 cardType = officialCard?.type?.takeIf { it.isNotBlank() } ?: parsed.cardType,
                 domain = officialCard?.domain?.takeIf { it.isNotBlank() } ?: parsed.domain,
                 scannedAt = scannedAt,

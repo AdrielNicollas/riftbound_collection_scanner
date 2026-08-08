@@ -18,7 +18,6 @@ import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
 import com.adrielnicollas.riftbound_collection_scanner.data.CardEntity
 import com.adrielnicollas.riftbound_collection_scanner.data.CardKeys
 import com.adrielnicollas.riftbound_collection_scanner.data.CardDraftParser
-import com.adrielnicollas.riftbound_collection_scanner.data.ScanDates
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDraftEntity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -99,6 +98,7 @@ class CardReviewActivity : AppCompatActivity() {
                     name = binder.name,
                     cardNumber = binder.cardNumber,
                     cost = binder.cost,
+                    might = binder.might,
                     cardType = binder.cardType,
                     domain = binder.domain,
                     imagePath = binder.draft.imagePath,
@@ -131,14 +131,15 @@ class CardReviewActivity : AppCompatActivity() {
         private val nameInput: TextInputEditText = root.findViewById(R.id.nameInput)
         private val cardNumberInput: TextInputEditText = root.findViewById(R.id.cardNumberInput)
         private val costInput: TextInputEditText = root.findViewById(R.id.costInput)
+        private val mightInput: TextInputEditText = root.findViewById(R.id.mightInput)
         private val typeInput: AutoCompleteTextView = root.findViewById(R.id.typeInput)
         private val domainInput: AutoCompleteTextView = root.findViewById(R.id.domainInput)
-        private val scanDateText: TextView = root.findViewById(R.id.scanDateText)
         private val ocrInput: TextInputEditText = root.findViewById(R.id.ocrInput)
 
         val name: String get() = nameInput.text?.toString()?.trim().orEmpty()
         val cardNumber: String get() = cardNumberInput.text?.toString()?.trim().orEmpty()
         val cost: Int? get() = costInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.toIntOrNull()
+        val might: Int? get() = mightInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.toIntOrNull()
         val cardType: String get() = typeInput.text?.toString()?.trim().orEmpty()
         val domain: String get() = domainInput.text?.toString()?.trim().orEmpty()
         val ocrText: String get() = ocrInput.text?.toString()?.trim().orEmpty()
@@ -150,10 +151,10 @@ class CardReviewActivity : AppCompatActivity() {
             nameInput.setText(draft.name)
             cardNumberInput.setText(draft.cardNumber)
             draft.cost?.let { costInput.setText(it.toString()) }
+            draft.might?.let { mightInput.setText(it.toString()) }
             typeInput.setText(draft.cardType, false)
             domainInput.setText(draft.domain, false)
             ocrInput.setText(draft.ocrText)
-            scanDateText.text = "${getString(R.string.scan_date)}: ${ScanDates.formatDateTime(draft.scannedAt)}"
             typeInput.setAdapter(
                 ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.cardTypes),
             )

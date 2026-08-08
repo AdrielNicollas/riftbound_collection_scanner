@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.adrielnicollas.riftbound_collection_scanner.R
 import com.adrielnicollas.riftbound_collection_scanner.data.CardEntity
-import com.adrielnicollas.riftbound_collection_scanner.data.ScanDates
 import java.io.File
 
 class SavedCardsAdapter : RecyclerView.Adapter<SavedCardsAdapter.SavedCardViewHolder>() {
@@ -52,11 +51,12 @@ class SavedCardsAdapter : RecyclerView.Adapter<SavedCardsAdapter.SavedCardViewHo
 
         private fun buildDetails(card: CardEntity): String {
             val parts = buildList {
-                if (card.cardNumber.isNotBlank()) add("#${card.cardNumber}")
                 card.cost?.let { add("Custo $it") }
-                if (card.cardType.isNotBlank()) add(card.cardType)
+                card.might?.let { add("Might $it") }
                 if (card.domain.isNotBlank()) add(card.domain)
-                if (card.scannedAt > 0) add(ScanDates.formatDate(card.scannedAt))
+                if (card.cardType.isNotBlank()) add(card.cardType)
+                if (card.ocrText.isNotBlank()) add(card.ocrText)
+                if (card.cardNumber.isNotBlank()) add("#${card.cardNumber}")
             }
             return if (parts.isEmpty()) "Sem detalhes" else parts.joinToString(" | ")
         }

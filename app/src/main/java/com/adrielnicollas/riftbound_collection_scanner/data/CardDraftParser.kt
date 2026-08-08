@@ -6,6 +6,7 @@ data class CardDraft(
     val name: String,
     val cardNumber: String,
     val cost: Int?,
+    val might: Int?,
     val cardType: String,
     val domain: String,
     val effectText: String,
@@ -68,6 +69,7 @@ object CardDraftParser {
         val name = detectName(lines)
         val cardNumber = detectCardNumber(rawText, lines)
         val cost = detectCost(rawText, lines)
+        val might = detectMight(rawText, lines, cost)
         val cardType = detectOption(lines, cardTypes)
         val domain = detectOption(lines, domains)
 
@@ -75,6 +77,7 @@ object CardDraftParser {
             name = name,
             cardNumber = cardNumber,
             cost = cost,
+            might = might,
             cardType = cardType,
             domain = domain,
             effectText = detectEffectText(
@@ -82,6 +85,7 @@ object CardDraftParser {
                 name = name,
                 cardNumber = cardNumber,
                 cost = cost,
+                might = might,
                 cardType = cardType,
                 domain = domain,
             ),
@@ -151,6 +155,22 @@ object CardDraftParser {
             .firstOrNull { it in 0..20 }
     }
 
+    private fun detectMight(rawText: String, lines: List<String>, cost: Int?): Int? {
+        Regex("""(?i)\b(?:might|power|forca|força)\s*[:\-]?\s*(\d{1,2})\b""")
+            .find(rawText)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+            ?.takeIf { it in 0..99 }
+            ?.let { return it }
+
+        val numericLines = lines
+            .filter { it.matches(standaloneNumberRegex) && !looksLikeCardNumberLine(it) }
+            .mapNotNull { it.toIntOrNull()?.takeIf { value -> value in 0..99 } }
+
+        return numericLines.firstOrNull { it != cost }
+    }
+
     private fun looksLikeCardNumberLine(line: String): Boolean {
         return slashCardNumberRegex.containsMatchIn(line) ||
             setCardNumberRegex.containsMatchIn(line) ||
@@ -177,6 +197,7 @@ object CardDraftParser {
         name: String,
         cardNumber: String,
         cost: Int?,
+        might: Int?,
         cardType: String,
         domain: String,
     ): String {
@@ -186,6 +207,7 @@ object CardDraftParser {
             add(cardType.cleanComparable())
             add(domain.cleanComparable())
             cost?.let { add(it.toString()) }
+            might?.let { add(it.toString()) }
         }
 
         return lines

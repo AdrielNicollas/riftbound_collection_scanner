@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [CardEntity::class, ScanDraftEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -64,6 +64,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val migration5To6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE cards ADD COLUMN might INTEGER")
+                db.execSQL("ALTER TABLE scan_drafts ADD COLUMN might INTEGER")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -74,7 +81,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "riftbound_cards.db",
                 )
-                    .addMigrations(migration1To2, migration2To5, migration3To5, migration4To5)
+                    .addMigrations(migration1To2, migration2To5, migration3To5, migration4To5, migration5To6)
                     .build()
                     .also { instance = it }
             }

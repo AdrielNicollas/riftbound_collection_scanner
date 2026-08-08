@@ -19,6 +19,7 @@ class CardDraftParserTest {
         assertEquals("Mighty Poro", draft.name)
         assertEquals("", draft.cardNumber)
         assertEquals(3, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Unit", draft.cardType)
         assertEquals("Body", draft.domain)
         assertEquals("", draft.effectText)
@@ -39,6 +40,7 @@ class CardDraftParserTest {
         assertEquals("Lux", draft.name)
         assertEquals("", draft.cardNumber)
         assertEquals(2, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Champion Unit", draft.cardType)
         assertEquals("Order", draft.domain)
         assertEquals("", draft.effectText)
@@ -59,6 +61,7 @@ class CardDraftParserTest {
         assertEquals("Mystic Shot", draft.name)
         assertEquals("015/298", draft.cardNumber)
         assertEquals(null, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Spell", draft.cardType)
         assertEquals("Mind", draft.domain)
         assertEquals("", draft.effectText)
@@ -79,6 +82,7 @@ class CardDraftParserTest {
         assertEquals("Garen", draft.name)
         assertEquals("OGN-123", draft.cardNumber)
         assertEquals(4, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Champion Unit", draft.cardType)
         assertEquals("Order", draft.domain)
         assertEquals("", draft.effectText)
@@ -99,6 +103,7 @@ class CardDraftParserTest {
         assertEquals("Flame Chompers", draft.name)
         assertEquals("123/298", draft.cardNumber)
         assertEquals(1, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Gear", draft.cardType)
         assertEquals("Fury", draft.domain)
         assertEquals("", draft.effectText)
@@ -119,6 +124,7 @@ class CardDraftParserTest {
         assertEquals("Recall", draft.name)
         assertEquals("087", draft.cardNumber)
         assertEquals(2, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Spell", draft.cardType)
         assertEquals("Calm", draft.domain)
         assertEquals("", draft.effectText)
@@ -140,6 +146,7 @@ class CardDraftParserTest {
         assertEquals("Mystic Shot", draft.name)
         assertEquals("015/298", draft.cardNumber)
         assertEquals(2, draft.cost)
+        assertEquals(null, draft.might)
         assertEquals("Spell", draft.cardType)
         assertEquals("Mind", draft.domain)
         assertEquals("Deal 2 damage to a unit.", draft.effectText)
@@ -160,6 +167,7 @@ class CardDraftParserTest {
 
         assertEquals("Lux", draft.name)
         assertEquals("087", draft.cardNumber)
+        assertEquals(null, draft.might)
         assertEquals("Champion Unit", draft.cardType)
         assertEquals("Order", draft.domain)
         assertEquals(
@@ -181,6 +189,7 @@ class CardDraftParserTest {
 
         assertEquals("Arena Kingpin", draft.name)
         assertEquals("042/298", draft.cardNumber)
+        assertEquals(null, draft.might)
         assertEquals("Unit", draft.cardType)
         assertEquals("Noxus", draft.domain)
         assertEquals("When this unit attacks, deal 1 damage.", draft.effectText)
@@ -199,8 +208,31 @@ class CardDraftParserTest {
 
         assertEquals("Mystic Shot", draft.name)
         assertEquals("015/298", draft.cardNumber)
+        assertEquals(null, draft.might)
         assertEquals("Spell", draft.cardType)
         assertEquals("Mind", draft.domain)
         assertEquals("Deal 2 damage to a unit.", draft.effectText)
+    }
+
+    @Test
+    fun parsesCostAndMightFromSeparateNumbers() {
+        val draft = CardDraftParser.parse(
+            """
+            3
+            2
+            UNIT NOXUS
+            Reckless Trifarian
+            When this unit attacks, give it +1 might.
+            055/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Reckless Trifarian", draft.name)
+        assertEquals("055/298", draft.cardNumber)
+        assertEquals(3, draft.cost)
+        assertEquals(2, draft.might)
+        assertEquals("Unit", draft.cardType)
+        assertEquals("Noxus", draft.domain)
+        assertEquals("When this unit attacks, give it +1 might.", draft.effectText)
     }
 }

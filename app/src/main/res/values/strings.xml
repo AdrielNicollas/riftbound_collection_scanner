@@ -6,6 +6,7 @@
     <string name="capture_card">Capturar carta</string>
     <string name="card_cost">Custo</string>
     <string name="card_domain">Dominio</string>
+    <string name="card_might">Might</string>
     <string name="card_name">Nome da carta</string>
     <string name="card_number">Numero da carta</string>
     <string name="card_type">Tipo</string>

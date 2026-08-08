@@ -16,6 +16,7 @@ data class ScanDraftEntity(
     val name: String,
     val cardNumber: String,
     val cost: Int?,
+    val might: Int?,
     val cardType: String,
     val domain: String,
     val scannedAt: Long,
