@@ -8,6 +8,7 @@ app/build/
 /captures
 .ml-data/
 .venv-ml/
+__pycache__/
 .externalNativeBuild
 .cxx
 local.properties

@@ -47,6 +47,12 @@ If the crop is not centered on the symbol, tune the fractions:
 python ml\prepare_domain_dataset.py input output --crop 0.86 0.82 0.985 0.965
 ```
 
+Uncertain detections are skipped from training and copied to a sibling `*_needs_review` folder. If a dataset has false positives above the real bottom-right symbol area, you can also require detections to appear lower in the image:
+
+```powershell
+python ml\prepare_domain_dataset.py input output --min-center-y 0.78
+```
+
 Create a contact sheet to inspect crop quality:
 
 ```powershell

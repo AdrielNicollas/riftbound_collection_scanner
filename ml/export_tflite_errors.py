@@ -33,6 +33,8 @@ def load_image(path: Path, image_size: int, dtype) -> np.ndarray:
 def main():
     args = parse_args()
     labels = [line.strip() for line in args.labels.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if args.output_dir.exists():
+        shutil.rmtree(args.output_dir)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     interpreter = tf.lite.Interpreter(model_path=str(args.model))

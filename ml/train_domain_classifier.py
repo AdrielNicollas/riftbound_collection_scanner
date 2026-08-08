@@ -42,6 +42,7 @@ def build_model(image_size: int, class_count: int, augment: bool) -> tf.keras.Mo
 
 def main():
     args = parse_args()
+    tf.keras.utils.set_random_seed(args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
 
     train_ds = tf.keras.utils.image_dataset_from_directory(
