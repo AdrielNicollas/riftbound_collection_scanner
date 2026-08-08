@@ -125,6 +125,48 @@ python ml\export_tflite_errors.py `
   ".ml-data\evaluation_errors"
 ```
 
+## Symbol Dataset
+
+Use this for small cropped symbols found inside effect text, such as rune costs, power, and might. Each source folder should contain flat crop images for one class:
+
+```text
+symbol_dataset/
+  rune_white/
+  rune_black/
+  power/
+  might/
+```
+
+Each crop should contain one target symbol only, with a small amount of surrounding context. Avoid full words such as `EMPOWER`, `REPEAT`, or `FLOW` in the crop unless the word itself is the class being trained.
+
+Prepare the current rune dataset:
+
+```powershell
+python ml\prepare_symbol_dataset.py `
+  ".ml-data\processed_symbol_dataset" `
+  --label rune_white "C:\Users\Adriel Nicolau\Downloads\white\good" `
+  --label rune_black "C:\Users\Adriel Nicolau\Downloads\black" `
+  --clear
+```
+
+Train a symbol classifier:
+
+```powershell
+python ml\train_symbol_classifier.py `
+  ".ml-data\processed_symbol_dataset" `
+  ".ml-data\models\symbols_rune" `
+  --epochs 120
+```
+
+Outputs:
+
+```text
+.ml-data/models/symbols_rune/
+  labels.txt
+  riftbound_symbol_classifier.keras
+  riftbound_symbol_classifier.tflite
+```
+
 ## Open Source Notes
 
 The pipeline and model architecture can be public.
