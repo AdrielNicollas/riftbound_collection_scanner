@@ -167,4 +167,40 @@ class CardDraftParserTest {
             draft.effectText,
         )
     }
+
+    @Test
+    fun parsesCombinedTypeAndDomainLineWithoutUsingItAsNameOrEffect() {
+        val draft = CardDraftParser.parse(
+            """
+            UNIT NOXUS
+            Arena Kingpin
+            When this unit attacks, deal 1 damage.
+            042/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Arena Kingpin", draft.name)
+        assertEquals("042/298", draft.cardNumber)
+        assertEquals("Unit", draft.cardType)
+        assertEquals("Noxus", draft.domain)
+        assertEquals("When this unit attacks, deal 1 damage.", draft.effectText)
+    }
+
+    @Test
+    fun parsesCombinedCardTypeAndClassicDomainLine() {
+        val draft = CardDraftParser.parse(
+            """
+            Spell Mind
+            Mystic Shot
+            Deal 2 damage to a unit.
+            015/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Mystic Shot", draft.name)
+        assertEquals("015/298", draft.cardNumber)
+        assertEquals("Spell", draft.cardType)
+        assertEquals("Mind", draft.domain)
+        assertEquals("Deal 2 damage to a unit.", draft.effectText)
+    }
 }

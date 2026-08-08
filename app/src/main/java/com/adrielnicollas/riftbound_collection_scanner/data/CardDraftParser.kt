@@ -27,7 +27,25 @@ object CardDraftParser {
         "Event",
     )
 
-    val domains = listOf("Fury", "Calm", "Mind", "Body", "Chaos", "Order")
+    val domains = listOf(
+        "Fury",
+        "Calm",
+        "Mind",
+        "Body",
+        "Chaos",
+        "Order",
+        "Noxus",
+        "Demacia",
+        "Ionia",
+        "Freljord",
+        "Piltover",
+        "Zaun",
+        "Bilgewater",
+        "Shurima",
+        "Targon",
+        "Shadow Isles",
+        "Bandle City",
+    )
 
     private val costLabelRegex = Regex("""\b(?:cost|custo)\s*[:\-]?\s*(\d{1,2})\b""", RegexOption.IGNORE_CASE)
     private val standaloneNumberRegex = Regex("""\b\d{1,2}\b""")
@@ -81,8 +99,7 @@ object CardDraftParser {
                 !looksLikeCardNumberLine(line) &&
                 !costLabelRegex.containsMatchIn(line) &&
                 ignoredNameFragments.none { lower.contains(it) } &&
-                detectOption(listOf(line), cardTypes).isBlank() &&
-                detectOption(listOf(line), domains).isBlank()
+                !looksLikeMetadataLine(line)
         }.orEmpty()
     }
 
@@ -181,8 +198,7 @@ object CardDraftParser {
                     !looksLikeCardNumberLine(line) &&
                     !costLabelRegex.containsMatchIn(line) &&
                     ignoredNameFragments.none { comparable.contains(it) } &&
-                    detectOption(listOf(line), cardTypes).isBlank() &&
-                    detectOption(listOf(line), domains).isBlank()
+                    !looksLikeMetadataLine(line)
             }
             .joinToString(separator = "\n")
             .trim()
@@ -191,9 +207,47 @@ object CardDraftParser {
     private fun detectOption(lines: List<String>, options: List<String>): String {
         return options.firstOrNull { option ->
             lines.any { line ->
-                line.cleanComparable() == option.cleanComparable()
+                line.isMetadataLine() && line.containsOptionTokens(option)
             }
         }.orEmpty()
+    }
+
+    private fun looksLikeMetadataLine(line: String): Boolean {
+        return line.isMetadataLine()
+    }
+
+    private fun String.isMetadataLine(): Boolean {
+        val tokens = metadataTokens()
+        if (tokens.isEmpty()) return false
+
+        val options = (cardTypes + domains)
+            .map { it.metadataTokens() }
+            .sortedByDescending { it.size }
+
+        fun consume(remaining: List<String>, usedOptions: Int): Boolean {
+            if (remaining.isEmpty()) return usedOptions > 0
+            return options.any { option ->
+                option.isNotEmpty() &&
+                    remaining.size >= option.size &&
+                    remaining.take(option.size) == option &&
+                    consume(remaining.drop(option.size), usedOptions + 1)
+            }
+        }
+
+        return consume(tokens, usedOptions = 0)
+    }
+
+    private fun String.containsOptionTokens(option: String): Boolean {
+        val tokens = metadataTokens()
+        val target = option.metadataTokens()
+        if (target.isEmpty() || tokens.size < target.size) return false
+        return tokens.windowed(target.size).any { it == target }
+    }
+
+    private fun String.metadataTokens(): List<String> {
+        return cleanComparable()
+            .split(" ")
+            .filter { it.isNotBlank() }
     }
 
     private fun String.cleanComparable(): String {
