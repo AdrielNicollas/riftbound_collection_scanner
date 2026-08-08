@@ -25,4 +25,6 @@
     <string name="symbol_label">Label do simbolo</string>
     <string name="capture_symbol_photo">Capturar imagem</string>
     <string name="export_dataset_zip">Exportar ZIP</string>
+    <string name="export_domain_feedback">Exportar crops de dominio</string>
+    <string name="no_domain_feedback">Ainda nao ha crops de dominio para exportar</string>
 </resources>

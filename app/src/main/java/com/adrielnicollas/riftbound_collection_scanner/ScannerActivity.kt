@@ -25,6 +25,7 @@ import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardFramingValidator
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
+import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainFeedbackStore
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
 import com.adrielnicollas.riftbound_collection_scanner.ui.CardGuideOverlayView
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
@@ -281,6 +282,11 @@ class ScannerActivity : AppCompatActivity() {
                 val focusedMight = recognizeFocusedNumber(mightBitmap)
                 val predictedDomain = withContext(Dispatchers.IO) {
                     runCatching { domainClassifier.classify(domainBitmap) }.getOrNull()
+                }
+                withContext(Dispatchers.IO) {
+                    runCatching {
+                        DomainFeedbackStore.saveCrop(this@ScannerActivity, domainBitmap, predictedDomain)
+                    }
                 }
                 CardImageSignals(
                     cost = focusedCost,
