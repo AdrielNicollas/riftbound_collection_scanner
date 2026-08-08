@@ -31,6 +31,7 @@ import com.adrielnicollas.riftbound_collection_scanner.data.CardDraftParser
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDates
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDraftEntity
 import com.google.android.material.button.MaterialButton
+import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainSymbolClassifier
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -55,6 +56,7 @@ class ScannerActivity : AppCompatActivity() {
     private lateinit var finishBulkButton: MaterialButton
     private lateinit var cardGuideOverlay: CardGuideOverlayView
     private lateinit var textRecognizer: TextRecognizer
+    private val domainClassifier by lazy { DomainSymbolClassifier(this) }
 
     private val database by lazy { AppDatabase.get(this) }
     private val riotClient by lazy { RiotRiftboundClient() }
@@ -93,6 +95,7 @@ class ScannerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         textRecognizer.close()
+        domainClassifier.close()
     }
 
     private fun bindViews() {
@@ -259,16 +262,22 @@ class ScannerActivity : AppCompatActivity() {
         return try {
             val costBitmap = CardImageSignalDetector.cropCost(bitmap)
             val mightBitmap = CardImageSignalDetector.cropMight(bitmap)
+            val domainBitmap = CardImageSignalDetector.cropDomainSymbol(bitmap)
             try {
                 val focusedCost = recognizeFocusedNumber(costBitmap)
                 val focusedMight = recognizeFocusedNumber(mightBitmap)
+                val predictedDomain = withContext(Dispatchers.IO) {
+                    runCatching { domainClassifier.classify(domainBitmap)?.domain }.getOrNull()
+                }
                 colorSignals.copy(
                     cost = focusedCost,
                     might = focusedMight,
+                    domain = predictedDomain ?: colorSignals.domain,
                 )
             } finally {
                 costBitmap.recycle()
                 mightBitmap.recycle()
+                domainBitmap.recycle()
             }
         } finally {
             bitmap.recycle()
