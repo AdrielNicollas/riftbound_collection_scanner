@@ -19,5 +19,8 @@ class ModeSelectionActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.savedCardsButton).setOnClickListener {
             startActivity(Intent(this, SavedCardsActivity::class.java))
         }
+        findViewById<MaterialButton>(R.id.symbolDatasetButton).setOnClickListener {
+            startActivity(Intent(this, SymbolDatasetActivity::class.java))
+        }
     }
 }

@@ -20,4 +20,9 @@
     <string name="saved_cards">Cartas registadas</string>
     <string name="single_mode">Leitura single</string>
     <string name="status_ready">Camara pronta</string>
+    <string name="symbol_dataset">Dataset de simbolos</string>
+    <string name="symbol_dataset_hint">Escolhe a label, tira todas as fotos dessa categoria e exporta tudo num ZIP para o Drive.</string>
+    <string name="symbol_label">Label do simbolo</string>
+    <string name="capture_symbol_photo">Capturar imagem</string>
+    <string name="export_dataset_zip">Exportar ZIP</string>
 </resources>

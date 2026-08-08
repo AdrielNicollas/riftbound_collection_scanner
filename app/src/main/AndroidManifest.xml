@@ -19,6 +19,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Riftbound_card_reader"
         tools:targetApi="31">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <activity
+            android:name=".SymbolDatasetActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
         <activity
             android:name=".SavedCardsActivity"
             android:exported="false"
