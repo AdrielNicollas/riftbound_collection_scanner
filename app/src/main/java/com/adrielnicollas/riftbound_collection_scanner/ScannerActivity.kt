@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
+import com.adrielnicollas.riftbound_collection_scanner.imaging.CardFramingValidator
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
@@ -209,12 +210,27 @@ class ScannerActivity : AppCompatActivity() {
         }
         if (cropped) {
             rawPhotoFile.delete()
-            runTextRecognition(croppedPhotoFile)
         } else {
-            rawPhotoFile.copyTo(croppedPhotoFile, overwrite = true)
             rawPhotoFile.delete()
-            runTextRecognition(croppedPhotoFile)
+            croppedPhotoFile.delete()
+            captureButton.isEnabled = true
+            finishBulkButton.isEnabled = true
+            showStatus("Nao consegui recortar pela mira. Tenta novamente.")
+            return
         }
+
+        val framingResult = withContext(Dispatchers.IO) {
+            CardFramingValidator.validate(croppedPhotoFile)
+        }
+        if (!framingResult.isAcceptable) {
+            croppedPhotoFile.delete()
+            captureButton.isEnabled = true
+            finishBulkButton.isEnabled = true
+            showStatus(framingResult.message)
+            return
+        }
+
+        runTextRecognition(croppedPhotoFile)
     }
 
     private fun runTextRecognition(photoFile: File) {
