@@ -25,7 +25,6 @@ import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardFramingValidator
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
-import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainPrediction
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
 import com.adrielnicollas.riftbound_collection_scanner.ui.CardGuideOverlayView
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
@@ -269,12 +268,9 @@ class ScannerActivity : AppCompatActivity() {
     }
 
     private suspend fun detectImageSignals(photoFile: File): CardImageSignals {
-        val colorSignals = withContext(Dispatchers.IO) {
-            CardImageSignalDetector.detectColorSignals(photoFile)
-        }
         val bitmap = withContext(Dispatchers.IO) {
             CardImageSignalDetector.decode(photoFile)
-        } ?: return colorSignals
+        } ?: return CardImageSignals()
 
         return try {
             val costBitmap = CardImageSignalDetector.cropCost(bitmap)
@@ -286,10 +282,10 @@ class ScannerActivity : AppCompatActivity() {
                 val predictedDomain = withContext(Dispatchers.IO) {
                     runCatching { domainClassifier.classify(domainBitmap) }.getOrNull()
                 }
-                colorSignals.copy(
+                CardImageSignals(
                     cost = focusedCost,
                     might = focusedMight,
-                    domain = chooseDomain(predictedDomain, colorSignals.domain),
+                    domain = predictedDomain?.domain.orEmpty(),
                 )
             } finally {
                 costBitmap.recycle()
@@ -298,20 +294,6 @@ class ScannerActivity : AppCompatActivity() {
             }
         } finally {
             bitmap.recycle()
-        }
-    }
-
-    private fun chooseDomain(prediction: DomainPrediction?, colorDomain: String): String {
-        val visualDomain = colorDomain.takeIf { it.isNotBlank() }
-        if (prediction == null) return visualDomain.orEmpty()
-        if (visualDomain == null) return prediction.domain
-        if (prediction.domain == visualDomain) return visualDomain
-
-        val disagreement = setOf(prediction.domain, visualDomain)
-        return if (disagreement == setOf("Body", "Fury") && prediction.confidence >= 0.55f) {
-            prediction.domain
-        } else {
-            visualDomain
         }
     }
 

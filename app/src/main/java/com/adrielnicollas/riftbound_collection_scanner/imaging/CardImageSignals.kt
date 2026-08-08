@@ -25,15 +25,6 @@ object CardImageSignalDetector {
         DomainColor("Chaos", listOf(255f..310f)),
     )
 
-    fun detectColorSignals(file: File): CardImageSignals {
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return CardImageSignals()
-        return try {
-            CardImageSignals(domain = detectDomain(bitmap))
-        } finally {
-            bitmap.recycle()
-        }
-    }
-
     fun decode(file: File): Bitmap? = BitmapFactory.decodeFile(file.absolutePath)
 
     fun cropCost(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.04f, 0.03f, 0.23f, 0.17f)
@@ -42,43 +33,6 @@ object CardImageSignalDetector {
 
     fun cropDomainSymbol(bitmap: Bitmap): Bitmap {
         return cropDetectedDomainSymbol(bitmap) ?: bitmap.cropFraction(0.86f, 0.82f, 0.99f, 0.97f)
-    }
-
-    private fun detectDomain(bitmap: Bitmap): String {
-        val region = bitmap.cropFraction(0.84f, 0.86f, 0.99f, 0.99f)
-        return try {
-            sampleDomain(region).orEmpty()
-        } finally {
-            region.recycle()
-        }
-    }
-
-    private fun sampleDomain(bitmap: Bitmap): String? {
-        val counts = mutableMapOf<String, Int>()
-        val hsv = FloatArray(3)
-        val stepX = (bitmap.width / 32).coerceAtLeast(1)
-        val stepY = (bitmap.height / 32).coerceAtLeast(1)
-
-        var y = 0
-        while (y < bitmap.height) {
-            var x = 0
-            while (x < bitmap.width) {
-                Color.colorToHSV(bitmap.getPixel(x, y), hsv)
-                val hue = hsv[0]
-                val saturation = hsv[1]
-                val value = hsv[2]
-                if (saturation > 0.35f && value > 0.25f) {
-                    domainColors.firstOrNull { color -> color.hueRanges.any { hue in it } }
-                        ?.let { color -> counts[color.domain] = counts.getOrDefault(color.domain, 0) + 1 }
-                }
-                x += stepX
-            }
-            y += stepY
-        }
-
-        return counts.maxByOrNull { it.value }
-            ?.takeIf { it.value >= 4 }
-            ?.key
     }
 
     private fun cropDetectedDomainSymbol(bitmap: Bitmap): Bitmap? {
