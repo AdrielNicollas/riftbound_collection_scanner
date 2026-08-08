@@ -45,18 +45,11 @@ object CardImageSignalDetector {
     }
 
     private fun detectDomain(bitmap: Bitmap): String {
-        val regions = listOf(
-            bitmap.cropFraction(0.88f, 0.90f, 0.99f, 0.99f),
-            bitmap.cropFraction(0.03f, 0.11f, 0.16f, 0.25f),
-        )
-
+        val region = bitmap.cropFraction(0.84f, 0.86f, 0.99f, 0.99f)
         return try {
-            regions
-                .mapNotNull { sampleDomain(it) }
-                .distinct()
-                .joinToString(separator = " / ")
+            sampleDomain(region).orEmpty()
         } finally {
-            regions.forEach { it.recycle() }
+            region.recycle()
         }
     }
 
@@ -103,8 +96,8 @@ object CardImageSignalDetector {
         }
 
         return try {
-            val roiLeft = (small.width * 0.68f).roundToInt()
-            val roiTop = (small.height * 0.72f).roundToInt()
+            val roiLeft = (small.width * 0.78f).roundToInt()
+            val roiTop = (small.height * 0.82f).roundToInt()
             val mask = BooleanArray(small.width * small.height)
             val hsv = FloatArray(3)
 

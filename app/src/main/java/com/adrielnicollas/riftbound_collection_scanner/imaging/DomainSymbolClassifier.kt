@@ -92,6 +92,6 @@ class DomainSymbolClassifier(context: Context) : Closeable {
         private const val LABELS_FILE = "riftbound_domain_labels.txt"
         private const val CHANNEL_COUNT = 3
         private const val MODEL_IMAGE_SIZE = 160
-        private const val MIN_CONFIDENCE = 0.35f
+        private const val MIN_CONFIDENCE = 0.50f
     }
 }

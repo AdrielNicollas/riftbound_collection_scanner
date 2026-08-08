@@ -25,6 +25,7 @@ import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardFramingValidator
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
+import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainPrediction
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
 import com.adrielnicollas.riftbound_collection_scanner.ui.CardGuideOverlayView
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
@@ -283,12 +284,12 @@ class ScannerActivity : AppCompatActivity() {
                 val focusedCost = recognizeFocusedNumber(costBitmap)
                 val focusedMight = recognizeFocusedNumber(mightBitmap)
                 val predictedDomain = withContext(Dispatchers.IO) {
-                    runCatching { domainClassifier.classify(domainBitmap)?.domain }.getOrNull()
+                    runCatching { domainClassifier.classify(domainBitmap) }.getOrNull()
                 }
                 colorSignals.copy(
                     cost = focusedCost,
                     might = focusedMight,
-                    domain = predictedDomain ?: colorSignals.domain,
+                    domain = chooseDomain(predictedDomain, colorSignals.domain),
                 )
             } finally {
                 costBitmap.recycle()
@@ -297,6 +298,20 @@ class ScannerActivity : AppCompatActivity() {
             }
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    private fun chooseDomain(prediction: DomainPrediction?, colorDomain: String): String {
+        val visualDomain = colorDomain.takeIf { it.isNotBlank() }
+        if (prediction == null) return visualDomain.orEmpty()
+        if (visualDomain == null) return prediction.domain
+        if (prediction.domain == visualDomain) return visualDomain
+
+        val disagreement = setOf(prediction.domain, visualDomain)
+        return if (disagreement == setOf("Body", "Fury") && prediction.confidence >= 0.55f) {
+            prediction.domain
+        } else {
+            visualDomain
         }
     }
 
