@@ -35,6 +35,9 @@ object CardDraftParser {
         "Body",
         "Chaos",
         "Order",
+    )
+
+    private val regions = listOf(
         "Noxus",
         "Demacia",
         "Ionia",
@@ -51,11 +54,11 @@ object CardDraftParser {
     private val costLabelRegex = Regex("""\b(?:cost|custo)\s*[:\-]?\s*(\d{1,2})\b""", RegexOption.IGNORE_CASE)
     private val standaloneNumberRegex = Regex("""\b\d{1,2}\b""")
     private val labeledCardNumberRegex = Regex(
-        """(?i)\b(?:card\s*(?:no\.?|number|#)?|carta|number|numero|num\.?|no\.?|n\.?)\s*(?:#|[:\-])?\s*[A-Z]{0,5}\s*[- ]?\s*\d{1,4}(?:\s*/\s*\d{1,4})?[A-Z]?\b""",
+        """(?i)\b(?:card\s*(?:no\.?|number|#)?|carta|number|numero|num\.?|no\.?|n\.?)\s*(?:#|[:\-])?\s*[A-Z]{0,5}\s*[- ]?\s*\d{1,4}[A-Z]?(?:\s*/\s*\d{1,4}[A-Z]?)?\b""",
     )
-    private val hashCardNumberRegex = Regex("""(?i)#\s*\d{1,4}(?:\s*/\s*\d{1,4})?[A-Z]?\b""")
-    private val setCardNumberRegex = Regex("""\b[A-Z]{2,5}\s*-\s*\d{1,4}(?:\s*/\s*\d{1,4})?[A-Z]?\b""")
-    private val slashCardNumberRegex = Regex("""(?i)(?<!\d)\d{1,4}\s*/\s*\d{1,4}[A-Z]?(?!\d)""")
+    private val hashCardNumberRegex = Regex("""(?i)#\s*\d{1,4}[A-Z]?(?:\s*/\s*\d{1,4}[A-Z]?)?\b""")
+    private val setCardNumberRegex = Regex("""(?i)\b[A-Z]{2,5}\s*-\s*\d{1,4}[A-Z]?(?:\s*/\s*\d{1,4}[A-Z]?)?\b""")
+    private val slashCardNumberRegex = Regex("""(?i)(?<!\d)\d{1,4}[A-Z]?\s*/\s*\d{1,4}[A-Z]?(?!\d)""")
     private val footerCardNumberRegex = Regex("""(?i)^\d{3,4}[A-Z]?$""")
     private val onlySymbolsRegex = Regex("""^[\d\W_]+$""")
     private val ignoredNameFragments = listOf("league of legends", "riftbound", "riot games", "riot")
@@ -70,8 +73,8 @@ object CardDraftParser {
         val cardNumber = detectCardNumber(rawText, lines)
         val cost = detectCost(rawText, lines)
         val might = detectMight(rawText, lines, cost)
-        val cardType = detectOption(lines, cardTypes)
-        val domain = detectOption(lines, domains)
+        val cardType = detectCardType(lines)
+        val domain = detectDomain(lines)
 
         return CardDraft(
             name = name,
@@ -103,7 +106,8 @@ object CardDraftParser {
                 !looksLikeCardNumberLine(line) &&
                 !costLabelRegex.containsMatchIn(line) &&
                 ignoredNameFragments.none { lower.contains(it) } &&
-                !looksLikeMetadataLine(line)
+                !looksLikeMetadataLine(line) &&
+                !looksLikeCardHeaderLine(line)
         }.orEmpty()
     }
 
@@ -168,6 +172,10 @@ object CardDraftParser {
             .filter { it.matches(standaloneNumberRegex) && !looksLikeCardNumberLine(it) }
             .mapNotNull { it.toIntOrNull()?.takeIf { value -> value in 0..99 } }
 
+        if (numericLines.size >= 2) {
+            return numericLines.drop(1).firstOrNull()
+        }
+
         return numericLines.firstOrNull { it != cost }
     }
 
@@ -220,18 +228,36 @@ object CardDraftParser {
                     !looksLikeCardNumberLine(line) &&
                     !costLabelRegex.containsMatchIn(line) &&
                     ignoredNameFragments.none { comparable.contains(it) } &&
-                    !looksLikeMetadataLine(line)
+                    !looksLikeMetadataLine(line) &&
+                    !looksLikeCardHeaderLine(line)
             }
             .joinToString(separator = "\n")
             .trim()
     }
 
-    private fun detectOption(lines: List<String>, options: List<String>): String {
-        return options.firstOrNull { option ->
+    private fun detectCardType(lines: List<String>): String {
+        return cardTypes.firstOrNull { option ->
             lines.any { line ->
-                line.isMetadataLine() && line.containsOptionTokens(option)
+                (line.isMetadataLine() || looksLikeCardHeaderLine(line)) &&
+                    line.containsOptionTokens(option)
             }
         }.orEmpty()
+    }
+
+    private fun detectDomain(lines: List<String>): String {
+        val detected = mutableListOf<String>()
+        lines
+            .filter { it.isMetadataLine() }
+            .forEach { line ->
+                line.metadataTokens().forEach { token ->
+                    val domain = domains.firstOrNull { it.cleanComparable() == token }
+                    if (domain != null && domain !in detected) {
+                        detected += domain
+                    }
+                }
+            }
+
+        return detected.joinToString(separator = " / ")
     }
 
     private fun looksLikeMetadataLine(line: String): Boolean {
@@ -242,7 +268,7 @@ object CardDraftParser {
         val tokens = metadataTokens()
         if (tokens.isEmpty()) return false
 
-        val options = (cardTypes + domains)
+        val options = (cardTypes + domains + regions)
             .map { it.metadataTokens() }
             .sortedByDescending { it.size }
 
@@ -257,6 +283,11 @@ object CardDraftParser {
         }
 
         return consume(tokens, usedOptions = 0)
+    }
+
+    private fun looksLikeCardHeaderLine(line: String): Boolean {
+        return cardTypes.any { line.containsOptionTokens(it) } &&
+            regions.any { line.containsOptionTokens(it) }
     }
 
     private fun String.containsOptionTokens(option: String): Boolean {

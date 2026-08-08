@@ -74,9 +74,9 @@ class CardReviewActivity : AppCompatActivity() {
         reviewContainer.removeAllViews()
         binders.clear()
         val inflater = LayoutInflater.from(this)
-        drafts.forEachIndexed { index, draft ->
+        drafts.forEach { draft ->
             val view = inflater.inflate(R.layout.item_review_draft, reviewContainer, false)
-            val binder = DraftReviewBinder(view, draft, index + 1)
+            val binder = DraftReviewBinder(view, draft)
             binder.bind()
             reviewContainer.addView(view)
             binders.add(binder)
@@ -123,10 +123,8 @@ class CardReviewActivity : AppCompatActivity() {
     private inner class DraftReviewBinder(
         private val root: View,
         val draft: ScanDraftEntity,
-        private val position: Int,
     ) {
         val nameLayout: TextInputLayout = root.findViewById(R.id.nameLayout)
-        private val draftTitle: TextView = root.findViewById(R.id.draftTitle)
         private val draftImage: ImageView = root.findViewById(R.id.draftImage)
         private val nameInput: TextInputEditText = root.findViewById(R.id.nameInput)
         private val cardNumberInput: TextInputEditText = root.findViewById(R.id.cardNumberInput)
@@ -145,7 +143,6 @@ class CardReviewActivity : AppCompatActivity() {
         val ocrText: String get() = ocrInput.text?.toString()?.trim().orEmpty()
 
         fun bind() {
-            draftTitle.text = "Carta $position"
             val imageFile = File(draft.imagePath)
             if (imageFile.exists()) draftImage.setImageURI(Uri.fromFile(imageFile))
             nameInput.setText(draft.name)

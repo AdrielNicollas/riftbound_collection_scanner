@@ -177,7 +177,7 @@ class CardDraftParserTest {
     }
 
     @Test
-    fun parsesCombinedTypeAndDomainLineWithoutUsingItAsNameOrEffect() {
+    fun parsesCombinedTypeAndRegionLineWithoutUsingItAsNameOrEffect() {
         val draft = CardDraftParser.parse(
             """
             UNIT NOXUS
@@ -191,7 +191,7 @@ class CardDraftParserTest {
         assertEquals("042/298", draft.cardNumber)
         assertEquals(null, draft.might)
         assertEquals("Unit", draft.cardType)
-        assertEquals("Noxus", draft.domain)
+        assertEquals("", draft.domain)
         assertEquals("When this unit attacks, deal 1 damage.", draft.effectText)
     }
 
@@ -232,7 +232,71 @@ class CardDraftParserTest {
         assertEquals(3, draft.cost)
         assertEquals(2, draft.might)
         assertEquals("Unit", draft.cardType)
-        assertEquals("Noxus", draft.domain)
+        assertEquals("", draft.domain)
         assertEquals("When this unit attacks, give it +1 might.", draft.effectText)
+    }
+
+    @Test
+    fun parsesCostAndMightWhenTheyHaveTheSameValue() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            4
+            CHAMPION UNIT FIORA DEMACIA
+            Fiora
+            While I'm MIGHTY, I have DEFLECT.
+            232/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Fiora", draft.name)
+        assertEquals("232/298", draft.cardNumber)
+        assertEquals(4, draft.cost)
+        assertEquals(4, draft.might)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("", draft.domain)
+        assertEquals("While I'm MIGHTY, I have DEFLECT.", draft.effectText)
+    }
+
+    @Test
+    fun ignoresRegionHeaderForDianaAndKeepsChaosDomainWhenOcrReadsIt() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            3
+            Chaos
+            CHAMPION UNIT DIANA MOUNT TARGON
+            Diana
+            AMBUSH
+            When you play a spell, give me +2 this turn.
+            149a/219
+            """.trimIndent(),
+        )
+
+        assertEquals("Diana", draft.name)
+        assertEquals("149a/219", draft.cardNumber)
+        assertEquals(4, draft.cost)
+        assertEquals(3, draft.might)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("Chaos", draft.domain)
+        assertEquals("AMBUSH\nWhen you play a spell, give me +2 this turn.", draft.effectText)
+    }
+
+    @Test
+    fun preservesMultiplePowerDomainsInOcrOrder() {
+        val draft = CardDraftParser.parse(
+            """
+            2
+            Order Body
+            Spell
+            Arise
+            Return a unit from your trash.
+            010/219
+            """.trimIndent(),
+        )
+
+        assertEquals("Arise", draft.name)
+        assertEquals("Order / Body", draft.domain)
+        assertEquals("Spell", draft.cardType)
     }
 }
