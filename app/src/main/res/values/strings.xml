@@ -1,14 +1,19 @@
 <resources>
     <string name="app_name">Riftbound Collection Scanner</string>
     <string name="bulk_finish">Terminar bulk</string>
+    <string name="bulk_finish_confirm_title">Terminar leitura bulk?</string>
+    <string name="bulk_finish_confirm_message">Vais exportar o dataset OCR desta sessao com %1$d cartas e sair da camera. Nao sera aberto o ecra de review.</string>
+    <string name="bulk_finish_confirm_action">Exportar e terminar</string>
     <string name="bulk_mode">Leitura bulk</string>
     <string name="bulk_status">Cartas lidas: %1$d</string>
     <string name="capture_card">Capturar carta</string>
     <string name="card_cost">Custo</string>
+    <string name="card_power_cost">Power cost</string>
     <string name="card_domain">Dominio</string>
     <string name="card_might">Might</string>
     <string name="card_name">Nome da carta</string>
     <string name="card_number">Numero da carta</string>
+    <string name="card_set">Set</string>
     <string name="card_type">Tipo</string>
     <string name="choose_mode">Escolhe o tipo de leitura</string>
     <string name="open_saved_cards">Cartas guardadas</string>
@@ -20,11 +25,10 @@
     <string name="saved_cards">Cartas registadas</string>
     <string name="single_mode">Leitura single</string>
     <string name="status_ready">Camara pronta</string>
-    <string name="symbol_dataset">Dataset de simbolos</string>
-    <string name="symbol_dataset_hint">Escolhe a label, tira todas as fotos dessa categoria e exporta tudo num ZIP para o Drive.</string>
-    <string name="symbol_label">Label do simbolo</string>
-    <string name="capture_symbol_photo">Capturar imagem</string>
-    <string name="export_dataset_zip">Exportar ZIP</string>
-    <string name="export_domain_feedback">Exportar crops de dominio</string>
-    <string name="no_domain_feedback">Ainda nao ha crops de dominio para exportar</string>
+    <string name="clear_local_images">Limpar imagens locais</string>
+    <string name="clear_local_images_confirmation">Isto apaga fotos recortadas, imagens temporarias, exports antigos e datasets antigos guardados pela app. Os dados das cartas na base de dados ficam.</string>
+    <string name="clear_local_images_confirm">Limpar</string>
+    <string name="clear_local_images_done">Imagens apagadas: %1$d (%2$s)</string>
+    <string name="export_ocr_dataset">Exportar dataset OCR</string>
+    <string name="export_ocr_dataset_empty">Nao ha imagens para exportar</string>
 </resources>

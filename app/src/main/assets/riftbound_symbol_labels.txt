@@ -1,0 +1,10 @@
+exhaust
+might
+power_any
+power_body
+power_calm
+power_chaos
+power_fury
+power_mind
+power_order
+rune

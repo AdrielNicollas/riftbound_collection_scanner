@@ -11,6 +11,7 @@ import kotlin.math.roundToInt
 
 data class CardImageSignals(
     val cost: Int? = null,
+    val powerCost: String = "",
     val might: Int? = null,
     val domain: String = "",
 )
@@ -29,7 +30,13 @@ object CardImageSignalDetector {
 
     fun cropCost(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.04f, 0.03f, 0.23f, 0.17f)
 
+    fun cropRuneCostNumber(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.04f, 0.03f, 0.19f, 0.15f)
+
+    fun cropPowerCostSymbol(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.045f, 0.135f, 0.165f, 0.245f)
+
     fun cropMight(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.76f, 0.03f, 0.97f, 0.17f)
+
+    fun cropMightNumber(bitmap: Bitmap): Bitmap = bitmap.cropFraction(0.84f, 0.035f, 0.96f, 0.145f)
 
     fun cropDomainSymbol(bitmap: Bitmap): Bitmap {
         return cropDetectedDomainSymbol(bitmap) ?: bitmap.cropFraction(0.86f, 0.82f, 0.99f, 0.97f)

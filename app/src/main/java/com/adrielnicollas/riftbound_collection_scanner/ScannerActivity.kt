@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.util.Size
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
@@ -19,21 +20,24 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageCropper
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardFramingValidator
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignalDetector
 import com.adrielnicollas.riftbound_collection_scanner.imaging.CardImageSignals
-import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainFeedbackStore
 import com.adrielnicollas.riftbound_collection_scanner.riot.RiotRiftboundClient
 import com.adrielnicollas.riftbound_collection_scanner.ui.CardGuideOverlayView
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
 import com.adrielnicollas.riftbound_collection_scanner.data.CardDraftParser
+import com.adrielnicollas.riftbound_collection_scanner.data.CardScanDatasetExporter
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDates
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDraftEntity
 import com.google.android.material.button.MaterialButton
 import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainSymbolClassifier
+import com.adrielnicollas.riftbound_collection_scanner.imaging.SymbolClassifier
+import com.adrielnicollas.riftbound_collection_scanner.imaging.SymbolPrediction
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -58,7 +62,10 @@ class ScannerActivity : AppCompatActivity() {
     private lateinit var finishBulkButton: MaterialButton
     private lateinit var cardGuideOverlay: CardGuideOverlayView
     private lateinit var textRecognizer: TextRecognizer
-    private val domainClassifier by lazy { DomainSymbolClassifier(this) }
+    private val domainClassifierLazy = lazy { DomainSymbolClassifier(this) }
+    private val symbolClassifierLazy = lazy { SymbolClassifier(this) }
+    private val domainClassifier by domainClassifierLazy
+    private val symbolClassifier by symbolClassifierLazy
 
     private val database by lazy { AppDatabase.get(this) }
     private val riotClient by lazy { RiotRiftboundClient() }
@@ -97,7 +104,12 @@ class ScannerActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         textRecognizer.close()
-        domainClassifier.close()
+        if (domainClassifierLazy.isInitialized()) {
+            domainClassifier.close()
+        }
+        if (symbolClassifierLazy.isInitialized()) {
+            symbolClassifier.close()
+        }
     }
 
     private fun bindViews() {
@@ -122,8 +134,48 @@ class ScannerActivity : AppCompatActivity() {
             if (capturedCount == 0) {
                 showStatus("Captura pelo menos uma carta antes de terminar.")
             } else {
-                startActivity(CardReviewActivity.intentFor(this, sessionId, mode))
+                confirmFinishBulk()
+            }
+        }
+    }
+
+    private fun confirmFinishBulk() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.bulk_finish_confirm_title)
+            .setMessage(getString(R.string.bulk_finish_confirm_message, capturedCount))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.bulk_finish_confirm_action) { _, _ ->
+                exportBulkDatasetAndFinish()
+            }
+            .show()
+    }
+
+    private fun exportBulkDatasetAndFinish() {
+        lifecycleScope.launch {
+            captureButton.isEnabled = false
+            finishBulkButton.isEnabled = false
+            showStatus("A preparar dataset OCR...")
+            try {
+                val zipFile = withContext(Dispatchers.IO) {
+                    val drafts = database.cardDao().getDraftsForSession(sessionId)
+                    val items = drafts.map { CardScanDatasetExporter.fromDraft(it) }
+                    CardScanDatasetExporter.createExportZip(this@ScannerActivity, items)
+                }
+                if (zipFile == null) {
+                    showStatus(getString(R.string.export_ocr_dataset_empty))
+                    return@launch
+                }
+
+                val uri = FileProvider.getUriForFile(this@ScannerActivity, "$packageName.fileprovider", zipFile)
+                val intent = Intent(Intent.ACTION_SEND)
+                    .setType("application/zip")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                startActivity(Intent.createChooser(intent, getString(R.string.export_ocr_dataset)))
                 finish()
+            } finally {
+                captureButton.isEnabled = true
+                finishBulkButton.isEnabled = true
             }
         }
     }
@@ -274,27 +326,32 @@ class ScannerActivity : AppCompatActivity() {
         } ?: return CardImageSignals()
 
         return try {
+            val runeCostBitmap = CardImageSignalDetector.cropRuneCostNumber(bitmap)
             val costBitmap = CardImageSignalDetector.cropCost(bitmap)
+            val powerCostBitmap = CardImageSignalDetector.cropPowerCostSymbol(bitmap)
+            val mightNumberBitmap = CardImageSignalDetector.cropMightNumber(bitmap)
             val mightBitmap = CardImageSignalDetector.cropMight(bitmap)
             val domainBitmap = CardImageSignalDetector.cropDomainSymbol(bitmap)
             try {
-                val focusedCost = recognizeFocusedNumber(costBitmap)
-                val focusedMight = recognizeFocusedNumber(mightBitmap)
+                val focusedCost = recognizeFocusedNumber(runeCostBitmap) ?: recognizeFocusedNumber(costBitmap)
+                val focusedMight = recognizeFocusedNumber(mightNumberBitmap) ?: recognizeFocusedNumber(mightBitmap)
+                val predictedPowerCost = withContext(Dispatchers.IO) {
+                    runCatching { symbolClassifier.classify(powerCostBitmap)?.toPowerCost() }.getOrNull().orEmpty()
+                }
                 val predictedDomain = withContext(Dispatchers.IO) {
                     runCatching { domainClassifier.classify(domainBitmap) }.getOrNull()
                 }
-                withContext(Dispatchers.IO) {
-                    runCatching {
-                        DomainFeedbackStore.saveCrop(this@ScannerActivity, domainBitmap, predictedDomain)
-                    }
-                }
                 CardImageSignals(
                     cost = focusedCost,
+                    powerCost = predictedPowerCost,
                     might = focusedMight,
                     domain = predictedDomain?.domain.orEmpty(),
                 )
             } finally {
+                runeCostBitmap.recycle()
                 costBitmap.recycle()
+                powerCostBitmap.recycle()
+                mightNumberBitmap.recycle()
                 mightBitmap.recycle()
                 domainBitmap.recycle()
             }
@@ -321,29 +378,38 @@ class ScannerActivity : AppCompatActivity() {
             ?.takeIf { it in 0..99 }
     }
 
+    private fun SymbolPrediction.toPowerCost(): String {
+        if (confidence < MIN_POWER_COST_CONFIDENCE) return ""
+        return when (label) {
+            "power_any" -> "Any"
+            "power_body" -> "Body"
+            "power_calm" -> "Calm"
+            "power_chaos" -> "Chaos"
+            "power_fury" -> "Fury"
+            "power_mind" -> "Mind"
+            "power_order" -> "Order"
+            else -> ""
+        }
+    }
+
     private suspend fun saveDraft(photoFile: File, ocrText: String, imageSignals: CardImageSignals) {
         val parsed = CardDraftParser.parse(ocrText)
         showStatus("A confirmar dados da carta...")
         val officialCard = withContext(Dispatchers.IO) {
             riotClient.findBestMatch(parsed)
         }
-        val finalPhotoFile = officialCard?.let { card ->
-            val officialPhotoFile = createOfficialPhotoFile()
-            val downloaded = withContext(Dispatchers.IO) {
-                riotClient.downloadCardImage(card, officialPhotoFile)
-            }
-            if (downloaded) officialPhotoFile else null
-        } ?: photoFile
         val scannedAt = ScanDates.now()
         val draft = withContext(Dispatchers.IO) {
             val nextOrder = database.cardDao().getMaxDraftOrder(sessionId) + 1
             val entity = ScanDraftEntity(
                 sessionId = sessionId,
-                imagePath = finalPhotoFile.absolutePath,
+                imagePath = photoFile.absolutePath,
                 ocrText = officialCard?.effectText?.takeIf { it.isNotBlank() } ?: parsed.effectText,
                 name = officialCard?.name?.takeIf { it.isNotBlank() } ?: parsed.name,
                 cardNumber = officialCard?.cardNumber?.takeIf { it.isNotBlank() } ?: parsed.cardNumber,
+                cardSet = parsed.cardSet,
                 cost = imageSignals.cost ?: parsed.cost,
+                powerCost = imageSignals.powerCost.takeIf { it.isNotBlank() } ?: parsed.powerCost,
                 might = imageSignals.might ?: parsed.might,
                 cardType = officialCard?.type?.takeIf { it.isNotBlank() } ?: parsed.cardType,
                 domain = officialCard?.domain?.takeIf { it.isNotBlank() }
@@ -384,12 +450,6 @@ class ScannerActivity : AppCompatActivity() {
         return File(photosDir, "riftbound_$timestamp.jpg")
     }
 
-    private fun createOfficialPhotoFile(): File {
-        val photosDir = File(filesDir, "card_photos").apply { mkdirs() }
-        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(Date())
-        return File(photosDir, "official_riftbound_$timestamp.jpg")
-    }
-
     private fun showStatus(message: String) {
         statusText.text = message
     }
@@ -397,6 +457,7 @@ class ScannerActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_MODE = "extra_scan_mode"
         const val EXTRA_SESSION_ID = "extra_session_id"
+        private const val MIN_POWER_COST_CONFIDENCE = 0.90f
 
         fun intentFor(context: Context, mode: ScanMode): Intent {
             return Intent(context, ScannerActivity::class.java)

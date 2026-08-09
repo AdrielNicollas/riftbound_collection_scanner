@@ -39,7 +39,8 @@ def main():
         output_label_dir = args.output_dir / label
         output_label_dir.mkdir(parents=True, exist_ok=True)
 
-        count = 0
+        start_count = len(list(output_label_dir.glob(f"{label}_*.jpg")))
+        count = start_count
         for image_path in sorted(source_dir.iterdir()):
             if not image_path.is_file() or image_path.suffix.lower() not in IMAGE_EXTENSIONS:
                 continue
@@ -53,8 +54,9 @@ def main():
             count += 1
             output_file = output_label_dir / f"{label}_{count:04d}.jpg"
             prepared.save(output_file, quality=95)
-        total += count
-        print(f"{label}: {count}")
+        written = count - start_count
+        total += written
+        print(f"{label}: {written} new, {count} total")
 
     print(f"wrote {total} prepared crops to {args.output_dir}")
 

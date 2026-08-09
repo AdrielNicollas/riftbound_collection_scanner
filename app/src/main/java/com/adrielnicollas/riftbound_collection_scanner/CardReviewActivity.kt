@@ -13,11 +13,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.adrielnicollas.riftbound_collection_scanner.data.AppDatabase
 import com.adrielnicollas.riftbound_collection_scanner.data.CardEntity
 import com.adrielnicollas.riftbound_collection_scanner.data.CardKeys
 import com.adrielnicollas.riftbound_collection_scanner.data.CardDraftParser
+import com.adrielnicollas.riftbound_collection_scanner.data.CardScanDatasetExporter
+import com.adrielnicollas.riftbound_collection_scanner.data.CardScanDatasetItem
 import com.adrielnicollas.riftbound_collection_scanner.data.ScanDraftEntity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -30,6 +33,7 @@ import kotlinx.coroutines.withContext
 class CardReviewActivity : AppCompatActivity() {
     private lateinit var reviewTitle: TextView
     private lateinit var reviewContainer: LinearLayout
+    private lateinit var exportOcrDatasetButton: MaterialButton
     private lateinit var saveCardsButton: MaterialButton
 
     private val database by lazy { AppDatabase.get(this) }
@@ -48,8 +52,10 @@ class CardReviewActivity : AppCompatActivity() {
 
         reviewTitle = findViewById(R.id.reviewTitle)
         reviewContainer = findViewById(R.id.reviewContainer)
+        exportOcrDatasetButton = findViewById(R.id.exportOcrDatasetButton)
         saveCardsButton = findViewById(R.id.saveCardsButton)
         saveCardsButton.text = if (mode == ScanMode.SINGLE) getString(R.string.save_card) else getString(R.string.save_cards)
+        exportOcrDatasetButton.setOnClickListener { exportOcrDataset() }
         saveCardsButton.setOnClickListener { saveReviewedCards() }
 
         loadDrafts()
@@ -97,7 +103,9 @@ class CardReviewActivity : AppCompatActivity() {
                 CardEntity(
                     name = binder.name,
                     cardNumber = binder.cardNumber,
+                    cardSet = binder.cardSet,
                     cost = binder.cost,
+                    powerCost = binder.powerCost,
                     might = binder.might,
                     cardType = binder.cardType,
                     domain = binder.domain,
@@ -120,6 +128,49 @@ class CardReviewActivity : AppCompatActivity() {
         }
     }
 
+    private fun exportOcrDataset() {
+        lifecycleScope.launch {
+            exportOcrDatasetButton.isEnabled = false
+            saveCardsButton.isEnabled = false
+            try {
+                val items = binders.mapIndexed { index, binder ->
+                    CardScanDatasetItem(
+                        id = "draft_${binder.draft.id.takeIf { it > 0 } ?: index + 1}",
+                        imagePath = binder.draft.imagePath,
+                        name = binder.name,
+                        cardNumber = binder.cardNumber,
+                        cardSet = binder.cardSet,
+                        cost = binder.cost,
+                        powerCost = binder.powerCost,
+                        might = binder.might,
+                        cardType = binder.cardType,
+                        domain = binder.domain,
+                        effectText = binder.ocrText,
+                        scannedAt = binder.draft.scannedAt,
+                        scanDate = binder.draft.scanDate,
+                    )
+                }
+                val zipFile = withContext(Dispatchers.IO) {
+                    CardScanDatasetExporter.createExportZip(this@CardReviewActivity, items)
+                }
+                if (zipFile == null) {
+                    Toast.makeText(this@CardReviewActivity, R.string.export_ocr_dataset_empty, Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val uri = FileProvider.getUriForFile(this@CardReviewActivity, "$packageName.fileprovider", zipFile)
+                val intent = Intent(Intent.ACTION_SEND)
+                    .setType("application/zip")
+                    .putExtra(Intent.EXTRA_STREAM, uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                startActivity(Intent.createChooser(intent, getString(R.string.export_ocr_dataset)))
+            } finally {
+                exportOcrDatasetButton.isEnabled = true
+                saveCardsButton.isEnabled = true
+            }
+        }
+    }
+
     private inner class DraftReviewBinder(
         private val root: View,
         val draft: ScanDraftEntity,
@@ -128,7 +179,9 @@ class CardReviewActivity : AppCompatActivity() {
         private val draftImage: ImageView = root.findViewById(R.id.draftImage)
         private val nameInput: TextInputEditText = root.findViewById(R.id.nameInput)
         private val cardNumberInput: TextInputEditText = root.findViewById(R.id.cardNumberInput)
+        private val cardSetInput: AutoCompleteTextView = root.findViewById(R.id.cardSetInput)
         private val costInput: TextInputEditText = root.findViewById(R.id.costInput)
+        private val powerCostInput: AutoCompleteTextView = root.findViewById(R.id.powerCostInput)
         private val mightInput: TextInputEditText = root.findViewById(R.id.mightInput)
         private val typeInput: AutoCompleteTextView = root.findViewById(R.id.typeInput)
         private val domainInput: AutoCompleteTextView = root.findViewById(R.id.domainInput)
@@ -136,7 +189,9 @@ class CardReviewActivity : AppCompatActivity() {
 
         val name: String get() = nameInput.text?.toString()?.trim().orEmpty()
         val cardNumber: String get() = cardNumberInput.text?.toString()?.trim().orEmpty()
+        val cardSet: String get() = cardSetInput.text?.toString()?.trim().orEmpty()
         val cost: Int? get() = costInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.toIntOrNull()
+        val powerCost: String get() = powerCostInput.text?.toString()?.trim().orEmpty()
         val might: Int? get() = mightInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }?.toIntOrNull()
         val cardType: String get() = typeInput.text?.toString()?.trim().orEmpty()
         val domain: String get() = domainInput.text?.toString()?.trim().orEmpty()
@@ -147,7 +202,9 @@ class CardReviewActivity : AppCompatActivity() {
             if (imageFile.exists()) draftImage.setImageURI(Uri.fromFile(imageFile))
             nameInput.setText(draft.name)
             cardNumberInput.setText(draft.cardNumber)
+            cardSetInput.setText(draft.cardSet, false)
             draft.cost?.let { costInput.setText(it.toString()) }
+            powerCostInput.setText(draft.powerCost, false)
             draft.might?.let { mightInput.setText(it.toString()) }
             typeInput.setText(draft.cardType, false)
             domainInput.setText(draft.domain, false)
@@ -158,8 +215,16 @@ class CardReviewActivity : AppCompatActivity() {
             domainInput.setAdapter(
                 ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.domains),
             )
+            cardSetInput.setAdapter(
+                ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.cardSets),
+            )
+            powerCostInput.setAdapter(
+                ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.powerCosts),
+            )
             typeInput.setOnClickListener { typeInput.showDropDown() }
             domainInput.setOnClickListener { domainInput.showDropDown() }
+            cardSetInput.setOnClickListener { cardSetInput.showDropDown() }
+            powerCostInput.setOnClickListener { powerCostInput.showDropDown() }
         }
     }
 

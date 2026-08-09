@@ -2,10 +2,10 @@ package com.adrielnicollas.riftbound_collection_scanner
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
-import com.adrielnicollas.riftbound_collection_scanner.imaging.DomainFeedbackStore
+import com.adrielnicollas.riftbound_collection_scanner.data.LocalImageCleaner
 import com.google.android.material.button.MaterialButton
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
@@ -13,13 +13,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class ModeSelectionActivity : AppCompatActivity() {
-    private lateinit var exportDomainFeedbackButton: MaterialButton
+    private lateinit var clearLocalImagesButton: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_mode_selection)
 
-        exportDomainFeedbackButton = findViewById(R.id.exportDomainFeedbackButton)
+        clearLocalImagesButton = findViewById(R.id.clearLocalImagesButton)
 
         findViewById<MaterialButton>(R.id.singleButton).setOnClickListener {
             startActivity(ScannerActivity.intentFor(this, ScanMode.SINGLE))
@@ -30,38 +30,36 @@ class ModeSelectionActivity : AppCompatActivity() {
         findViewById<MaterialButton>(R.id.savedCardsButton).setOnClickListener {
             startActivity(Intent(this, SavedCardsActivity::class.java))
         }
-        findViewById<MaterialButton>(R.id.symbolDatasetButton).setOnClickListener {
-            startActivity(Intent(this, SymbolDatasetActivity::class.java))
-        }
-        exportDomainFeedbackButton.setOnClickListener {
-            exportDomainFeedback()
+        clearLocalImagesButton.setOnClickListener {
+            confirmClearLocalImages()
         }
     }
 
-    private fun exportDomainFeedback() {
-        lifecycleScope.launch {
-            exportDomainFeedbackButton.isEnabled = false
-            try {
-                val zipFile = withContext(Dispatchers.IO) {
-                    DomainFeedbackStore.createExportZip(this@ModeSelectionActivity)
-                }
-                if (zipFile == null) {
-                    Toast.makeText(
-                        this@ModeSelectionActivity,
-                        R.string.no_domain_feedback,
-                        Toast.LENGTH_SHORT,
-                    ).show()
-                    return@launch
-                }
+    private fun confirmClearLocalImages() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.clear_local_images)
+            .setMessage(R.string.clear_local_images_confirmation)
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.clear_local_images_confirm) { _, _ ->
+                clearLocalImages()
+            }
+            .show()
+    }
 
-                val uri = FileProvider.getUriForFile(this@ModeSelectionActivity, "$packageName.fileprovider", zipFile)
-                val intent = Intent(Intent.ACTION_SEND)
-                    .setType("application/zip")
-                    .putExtra(Intent.EXTRA_STREAM, uri)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                startActivity(Intent.createChooser(intent, getString(R.string.export_domain_feedback)))
+    private fun clearLocalImages() {
+        lifecycleScope.launch {
+            clearLocalImagesButton.isEnabled = false
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    LocalImageCleaner.clear(this@ModeSelectionActivity)
+                }
+                Toast.makeText(
+                    this@ModeSelectionActivity,
+                    getString(R.string.clear_local_images_done, result.deletedFiles, result.deletedMegabytes),
+                    Toast.LENGTH_LONG,
+                ).show()
             } finally {
-                exportDomainFeedbackButton.isEnabled = true
+                clearLocalImagesButton.isEnabled = true
             }
         }
     }

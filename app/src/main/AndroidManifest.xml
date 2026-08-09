@@ -30,10 +30,6 @@
         </provider>
 
         <activity
-            android:name=".SymbolDatasetActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
-        <activity
             android:name=".SavedCardsActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

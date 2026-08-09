@@ -81,6 +81,7 @@ class CardDraftParserTest {
 
         assertEquals("Garen", draft.name)
         assertEquals("OGN-123", draft.cardNumber)
+        assertEquals("OGN", draft.cardSet)
         assertEquals(4, draft.cost)
         assertEquals(null, draft.might)
         assertEquals("Champion Unit", draft.cardType)
@@ -275,12 +276,83 @@ class CardDraftParserTest {
         )
 
         assertEquals("Fiora", draft.name)
+        assertEquals("OGN", draft.cardSet)
         assertEquals(4, draft.cost)
         assertEquals(4, draft.might)
         assertEquals(
             "While I'm MIGHTY, I have DEFLECT, GANKING,\nand SHIELD. (I'm Mighty while I have 5+ [Might].)",
             draft.effectText,
         )
+    }
+
+    @Test
+    fun removesArtistCreditsAndCopyrightFromEffectText() {
+        val draft = CardDraftParser.parse(
+            """
+            5
+            5
+            UNIT NOXUS
+            Dame the Despoiler
+            EMPOWER 5 > (5 (O): Empower me. Use only if
+            not Empowered.)
+            EMPOWERED When I attack or defend, choose a
+            unit here. Increase my Might to its Might this turn,
+            then give me +1ý this turn.
+            "Wanna see a show?!"
+            / Kudos Productions \u00A9 2026RGI
+            VEN 079/166 EN
+            """.trimIndent(),
+        )
+
+        assertEquals("Dame the Despoiler", draft.name)
+        assertEquals("079/166", draft.cardNumber)
+        assertEquals("VEN", draft.cardSet)
+        assertEquals(
+            "EMPOWER 5[Rune] > (5[Rune] (O): Empower me. Use only if\n" +
+                "not Empowered.)\n" +
+                "EMPOWERED When I attack or defend, choose a\n" +
+                "unit here. Increase my Might to its Might this turn,\n" +
+                "then give me +1[Might] this turn.",
+            draft.effectText,
+        )
+    }
+
+    @Test
+    fun removesKnownArtistLineBesideDomainSymbol() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            4
+            CHAMPION UNIT FIORA DEMACIA
+            Fiora
+            While I'm MIGHTY, I have DEFLECT.
+            / Six More Vodka
+            \u00A92025RGI
+            OGN 232/298
+            """.trimIndent(),
+        )
+
+        assertEquals("Fiora", draft.name)
+        assertEquals("OGN", draft.cardSet)
+        assertEquals("While I'm MIGHTY, I have DEFLECT.", draft.effectText)
+    }
+
+    @Test
+    fun parsesSetCodeBesideCardNumber() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            3
+            CHAMPION UNIT DIANA MOUNT TARGON
+            Diana
+            When you play a spell, give me +2 this turn.
+            UNL 149a/219
+            """.trimIndent(),
+        )
+
+        assertEquals("Diana", draft.name)
+        assertEquals("UNL", draft.cardSet)
+        assertEquals("149a/219", draft.cardNumber)
     }
 
     @Test
@@ -323,5 +395,78 @@ class CardDraftParserTest {
         assertEquals("Arise", draft.name)
         assertEquals("Order / Body", draft.domain)
         assertEquals("Spell", draft.cardType)
+    }
+
+    @Test
+    fun skipsOcrDamagedHeaderAndKeepsNameOutOfEffect() {
+        val draft = CardDraftParser.parse(
+            """
+            3
+            UAPION UNIT NOKUS
+            - Mel NEWLY AWAKENED -
+            When you play a spell, give me +1 [Might].
+            VEN O69/166 EN
+            """.trimIndent(),
+        )
+
+        assertEquals("Mel NEWLY AWAKENED", draft.name)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("069/166", draft.cardNumber)
+        assertEquals("VEN", draft.cardSet)
+        assertEquals("When you play a spell, give me +1 [Might].", draft.effectText)
+    }
+
+    @Test
+    fun annotatesRuneAndMightSymbolsInEffectText() {
+        val draft = CardDraftParser.parse(
+            """
+            3
+            UNIT NOXUS
+            Test Card
+            EMPOWER 3 > (3 Uto Empower me.)
+            When I attack, give me +1U this turn.
+            069/166
+            """.trimIndent(),
+        )
+
+        assertEquals(
+            "EMPOWER 3[Rune] > (3[Rune] [Might] to Empower me.)\n" +
+                "When I attack, give me +1 [Might] this turn.",
+            draft.effectText,
+        )
+    }
+
+    @Test
+    fun parsesMelScanWithoutUsingHeaderAsNameOrSubtitleAsEffect() {
+        val draft = CardDraftParser.parse(
+            """
+            4
+            UAPION UNIT MEI• NOKUS
+            Mel
+            NEWLY AWAKENED
+            When you play me, draw 1.
+            EMPOWER 3: Empower me. Use only if at
+            Empowered.)
+            EMPOWERED Your spells and abilities can't be
+            countered. Ifa spell or ability you control would give
+            -Uto a unit it chooses, it gives an additional -1U.
+            / Paindart Studio • ©2026RGI
+            VEN 069/166 EN
+            """.trimIndent(),
+        )
+
+        assertEquals("Mel", draft.name)
+        assertEquals("Champion Unit", draft.cardType)
+        assertEquals("VEN", draft.cardSet)
+        assertEquals("069/166", draft.cardNumber)
+        assertEquals(
+            "When you play me, draw 1.\n" +
+                "EMPOWER 3[Rune]: Empower me. Use only if not\n" +
+                "Empowered.)\n" +
+                "EMPOWERED Your spells and abilities can't be\n" +
+                "countered. If a spell or ability you control would give\n" +
+                "-[Might] to a unit it chooses, it gives an additional -1 [Might].",
+            draft.effectText,
+        )
     }
 }

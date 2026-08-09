@@ -52,10 +52,12 @@ class SavedCardsAdapter : RecyclerView.Adapter<SavedCardsAdapter.SavedCardViewHo
         private fun buildDetails(card: CardEntity): String {
             val parts = buildList {
                 card.cost?.let { add("Custo $it") }
+                if (card.powerCost.isNotBlank()) add("Power ${card.powerCost}")
                 card.might?.let { add("Might $it") }
                 if (card.domain.isNotBlank()) add(card.domain)
                 if (card.cardType.isNotBlank()) add(card.cardType)
                 if (card.ocrText.isNotBlank()) add(card.ocrText)
+                if (card.cardSet.isNotBlank()) add("Set ${card.cardSet}")
                 if (card.cardNumber.isNotBlank()) add("#${card.cardNumber}")
             }
             return if (parts.isEmpty()) "Sem detalhes" else parts.joinToString(" | ")
