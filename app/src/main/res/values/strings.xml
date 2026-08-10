@@ -2,13 +2,17 @@
     <string name="app_name">Riftbound Collection Scanner</string>
     <string name="bulk_finish">Terminar bulk</string>
     <string name="bulk_finish_confirm_title">Terminar leitura bulk?</string>
-    <string name="bulk_finish_confirm_message">Vais exportar o dataset OCR desta sessao com %1$d cartas e sair da camera. Nao sera aberto o ecra de review.</string>
-    <string name="bulk_finish_confirm_action">Exportar e terminar</string>
+    <string name="bulk_finish_confirm_message">Vais terminar a captura desta sessao com %1$d cartas e abrir a lista para review/exportacao.</string>
+    <string name="bulk_finish_confirm_action">Abrir lista</string>
+    <string name="bulk_review_title">Leitura bulk</string>
+    <string name="bulk_review_item_label">Carta %1$s</string>
     <string name="bulk_mode">Leitura bulk</string>
+    <string name="resume_bulk_mode_default">Continuar bulk</string>
     <string name="bulk_status">Cartas lidas: %1$d</string>
+    <string name="bulk_resumed_status">Sessao bulk retomada: %1$d cartas ja lidas.</string>
     <string name="capture_card">Capturar carta</string>
     <string name="card_cost">Custo</string>
-    <string name="card_power_cost">Power cost</string>
+    <string name="card_power_cost">Power cost (ex: 1 Order / Body)</string>
     <string name="card_domain">Dominio</string>
     <string name="card_might">Might</string>
     <string name="card_name">Nome da carta</string>
@@ -21,6 +25,8 @@
     <string name="review_cards">Rever cartas</string>
     <string name="save_card">Guardar carta</string>
     <string name="save_cards">Guardar cartas</string>
+    <string name="save_draft_corrections">Guardar correcoes</string>
+    <string name="draft_corrections_saved">Correcoes guardadas</string>
     <string name="scan_date">Data da leitura</string>
     <string name="saved_cards">Cartas registadas</string>
     <string name="single_mode">Leitura single</string>
@@ -31,4 +37,13 @@
     <string name="clear_local_images_done">Imagens apagadas: %1$d (%2$s)</string>
     <string name="export_ocr_dataset">Exportar dataset OCR</string>
     <string name="export_ocr_dataset_empty">Nao ha imagens para exportar</string>
+
+    <plurals name="resume_bulk_mode">
+        <item quantity="one">Continuar bulk (%1$d carta)</item>
+        <item quantity="other">Continuar bulk (%1$d cartas)</item>
+    </plurals>
+    <plurals name="bulk_review_subtitle">
+        <item quantity="one">%1$d carta lida</item>
+        <item quantity="other">%1$d cartas lidas</item>
+    </plurals>
 </resources>

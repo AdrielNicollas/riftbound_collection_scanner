@@ -177,3 +177,82 @@ Do not publish raw card photos or card artwork unless you have permission. A goo
 - publish these scripts;
 - publish instructions for users to train with their own photos;
 - optionally publish trained weights only after checking the licensing situation.
+
+## OCR Bulk Review Dataset
+
+The Android app can export bulk scans with full-card images and parsed JSON. Use this flow to turn that export into crops, review sheets, and training-candidate datasets.
+
+Prepare review crops:
+
+```powershell
+python ml\prepare_ocr_review_crops.py `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947" `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops" `
+  --overwrite `
+  --enhanced `
+  --symbol-candidates
+```
+
+Open the generated `index.html` first. It links to:
+
+- review panels for likely name, might, footer/noise, and rotation issues;
+- OCR-enhanced contact sheets for comparing preprocessing variants;
+- symbol candidate sheets for manually splitting useful inline symbols;
+- `sheets/card_power_cost.jpg`, which shows the visual card power-cost area on the left side of the card;
+- `corrections_template_all.csv` and `corrections_template_suspicious.csv`.
+
+Build a training-candidate dataset from the review folder:
+
+```powershell
+python ml\build_ocr_training_dataset.py `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops" `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_training_candidate" `
+  --corrections "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops\corrections_template_all.csv" `
+  --overwrite
+```
+
+The output contains:
+
+```text
+labels.jsonl
+text/name/images + labels.csv
+text/effect/images + labels.csv
+text/card_number/images + labels.csv
+classification/type/<label>
+classification/domain/<label>
+classification/power_cost/<label>
+classification/set/<label>
+numeric/cost/<label>
+numeric/might/<label>
+```
+
+By default, parsed values are exported as pseudo-labels. If you only want reviewed/corrected data, fill the `correct_*` columns in a correction CSV and rerun with `--only-corrected`.
+
+For card power cost, the training crop comes from `crop_card_power_cost`, not from inline effect text. Inline symbols inside the effect box should be reviewed separately from `symbol_candidates`.
+
+See `ml/OCR_BULK_EXPERIMENTS.md` for the current pseudo-label baseline results and notes about which fields are worth improving first.
+
+## External Card Metadata
+
+If you have an external metadata export with fields such as `name`, `card_number`, `card_type`, `card_type_labels`, and `tags`, use it to enrich the correction CSV before rebuilding the training dataset:
+
+```powershell
+python ml\enrich_corrections_from_card_metadata.py `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops\corrections_template_all.csv" `
+  "hf:Wysme/riftbound-cards" `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops\corrections_with_metadata.csv"
+```
+
+You can also pass a local CSV, JSON, or JSONL export instead of the `hf:` source.
+
+Then rebuild with the enriched file:
+
+```powershell
+python ml\build_ocr_training_dataset.py `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops" `
+  "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_training_candidate" `
+  --corrections "C:\Users\Adriel Nicolau\Downloads\riftbound_ocr_dataset_20260809_132947_crops\corrections_with_metadata.csv" `
+  --overwrite
+```
+
+The Hugging Face dataset `Wysme/riftbound-cards` includes card names, type, type labels, tags, domain, energy, power, might, ability text, image URLs, and source URLs. Use it as metadata/reference data, not as a replacement for camera-photo training data.

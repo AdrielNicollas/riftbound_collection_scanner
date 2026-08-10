@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [CardEntity::class, ScanDraftEntity::class],
-    version = 8,
+    version = 10,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +85,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val migration8To9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scan_drafts ADD COLUMN rawOcrText TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE scan_drafts ADD COLUMN effectOcrText TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val migration9To10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scan_drafts ADD COLUMN sectionOcrJson TEXT NOT NULL DEFAULT '{}'")
+            }
+        }
+
         @Volatile
         private var instance: AppDatabase? = null
 
@@ -103,6 +116,8 @@ abstract class AppDatabase : RoomDatabase() {
                         migration5To6,
                         migration6To7,
                         migration7To8,
+                        migration8To9,
+                        migration9To10,
                     )
                     .build()
                     .also { instance = it }

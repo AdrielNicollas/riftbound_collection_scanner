@@ -38,6 +38,10 @@
             android:exported="false"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".BulkReviewActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".ScannerActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

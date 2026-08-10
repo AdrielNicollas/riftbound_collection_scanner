@@ -40,6 +40,7 @@ class CardReviewActivity : AppCompatActivity() {
     private val binders = mutableListOf<DraftReviewBinder>()
     private lateinit var sessionId: String
     private lateinit var mode: ScanMode
+    private var draftId: Long = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,12 +50,18 @@ class CardReviewActivity : AppCompatActivity() {
         mode = intent.getStringExtra(EXTRA_MODE)
             ?.let { ScanMode.valueOf(it) }
             ?: ScanMode.SINGLE
+        draftId = intent.getLongExtra(EXTRA_DRAFT_ID, 0)
 
         reviewTitle = findViewById(R.id.reviewTitle)
         reviewContainer = findViewById(R.id.reviewContainer)
         exportOcrDatasetButton = findViewById(R.id.exportOcrDatasetButton)
         saveCardsButton = findViewById(R.id.saveCardsButton)
-        saveCardsButton.text = if (mode == ScanMode.SINGLE) getString(R.string.save_card) else getString(R.string.save_cards)
+        saveCardsButton.text = when {
+            draftId > 0 -> getString(R.string.save_draft_corrections)
+            mode == ScanMode.SINGLE -> getString(R.string.save_card)
+            else -> getString(R.string.save_cards)
+        }
+        exportOcrDatasetButton.visibility = if (draftId > 0) View.GONE else View.VISIBLE
         exportOcrDatasetButton.setOnClickListener { exportOcrDataset() }
         saveCardsButton.setOnClickListener { saveReviewedCards() }
 
@@ -64,7 +71,11 @@ class CardReviewActivity : AppCompatActivity() {
     private fun loadDrafts() {
         lifecycleScope.launch {
             val drafts = withContext(Dispatchers.IO) {
-                database.cardDao().getDraftsForSession(sessionId)
+                if (draftId > 0) {
+                    listOfNotNull(database.cardDao().getDraftById(draftId))
+                } else {
+                    database.cardDao().getDraftsForSession(sessionId)
+                }
             }
             if (drafts.isEmpty()) {
                 Toast.makeText(this@CardReviewActivity, "Sem cartas para rever", Toast.LENGTH_SHORT).show()
@@ -94,6 +105,11 @@ class CardReviewActivity : AppCompatActivity() {
         if (invalidBinder != null) {
             invalidBinder.nameLayout.error = "Obrigatorio"
             Toast.makeText(this, "Indica o nome de todas as cartas", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (draftId > 0 && mode == ScanMode.BULK) {
+            saveDraftCorrections()
             return
         }
 
@@ -128,6 +144,28 @@ class CardReviewActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveDraftCorrections() {
+        val binder = binders.firstOrNull() ?: return
+        lifecycleScope.launch {
+            val updated = binder.draft.copy(
+                name = binder.name,
+                cardNumber = binder.cardNumber,
+                cardSet = binder.cardSet,
+                cost = binder.cost,
+                powerCost = binder.powerCost,
+                might = binder.might,
+                cardType = binder.cardType,
+                domain = binder.domain,
+                ocrText = binder.ocrText,
+            )
+            withContext(Dispatchers.IO) {
+                database.cardDao().updateDraft(updated)
+            }
+            Toast.makeText(this@CardReviewActivity, R.string.draft_corrections_saved, Toast.LENGTH_SHORT).show()
+            finish()
+        }
+    }
+
     private fun exportOcrDataset() {
         lifecycleScope.launch {
             exportOcrDatasetButton.isEnabled = false
@@ -146,6 +184,9 @@ class CardReviewActivity : AppCompatActivity() {
                         cardType = binder.cardType,
                         domain = binder.domain,
                         effectText = binder.ocrText,
+                        rawOcrText = binder.draft.rawOcrText,
+                        effectOcrText = binder.draft.effectOcrText,
+                        sectionOcr = CardScanDatasetExporter.parseSectionOcrJson(binder.draft.sectionOcrJson),
                         scannedAt = binder.draft.scannedAt,
                         scanDate = binder.draft.scanDate,
                     )
@@ -181,7 +222,7 @@ class CardReviewActivity : AppCompatActivity() {
         private val cardNumberInput: TextInputEditText = root.findViewById(R.id.cardNumberInput)
         private val cardSetInput: AutoCompleteTextView = root.findViewById(R.id.cardSetInput)
         private val costInput: TextInputEditText = root.findViewById(R.id.costInput)
-        private val powerCostInput: AutoCompleteTextView = root.findViewById(R.id.powerCostInput)
+        private val powerCostInput: TextInputEditText = root.findViewById(R.id.powerCostInput)
         private val mightInput: TextInputEditText = root.findViewById(R.id.mightInput)
         private val typeInput: AutoCompleteTextView = root.findViewById(R.id.typeInput)
         private val domainInput: AutoCompleteTextView = root.findViewById(R.id.domainInput)
@@ -204,7 +245,7 @@ class CardReviewActivity : AppCompatActivity() {
             cardNumberInput.setText(draft.cardNumber)
             cardSetInput.setText(draft.cardSet, false)
             draft.cost?.let { costInput.setText(it.toString()) }
-            powerCostInput.setText(draft.powerCost, false)
+            powerCostInput.setText(draft.powerCost)
             draft.might?.let { mightInput.setText(it.toString()) }
             typeInput.setText(draft.cardType, false)
             domainInput.setText(draft.domain, false)
@@ -218,24 +259,27 @@ class CardReviewActivity : AppCompatActivity() {
             cardSetInput.setAdapter(
                 ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.cardSets),
             )
-            powerCostInput.setAdapter(
-                ArrayAdapter(this@CardReviewActivity, android.R.layout.simple_dropdown_item_1line, CardDraftParser.powerCosts),
-            )
             typeInput.setOnClickListener { typeInput.showDropDown() }
             domainInput.setOnClickListener { domainInput.showDropDown() }
             cardSetInput.setOnClickListener { cardSetInput.showDropDown() }
-            powerCostInput.setOnClickListener { powerCostInput.showDropDown() }
         }
     }
 
     companion object {
         private const val EXTRA_SESSION_ID = "extra_session_id"
         private const val EXTRA_MODE = "extra_mode"
+        private const val EXTRA_DRAFT_ID = "extra_draft_id"
 
         fun intentFor(context: Context, sessionId: String, mode: ScanMode): Intent {
             return Intent(context, CardReviewActivity::class.java)
                 .putExtra(EXTRA_SESSION_ID, sessionId)
                 .putExtra(EXTRA_MODE, mode.name)
+        }
+
+        fun intentForDraft(context: Context, draftId: Long): Intent {
+            return Intent(context, CardReviewActivity::class.java)
+                .putExtra(EXTRA_MODE, ScanMode.BULK.name)
+                .putExtra(EXTRA_DRAFT_ID, draftId)
         }
     }
 }

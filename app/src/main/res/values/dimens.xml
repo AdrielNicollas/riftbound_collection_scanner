@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="bulk_review_item_height">64dp</dimen>
+    <dimen name="bulk_review_item_gap">10dp</dimen>
+    <dimen name="bulk_review_item_radius">18dp</dimen>
+    <dimen name="bulk_review_item_stroke">3dp</dimen>
+</resources>
